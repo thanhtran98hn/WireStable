@@ -1,7 +1,5 @@
 # WireStable // Next-Gen Intelligent Remittance Engine
 
-> **Track 1: Best Cross-Border Payments & Remittances Experience**
->
 > *An AI-Guided Conversational Rail for stable and predictable USDC transactions on Arc Testnet.*
 
 ---
@@ -202,4 +200,4 @@ wirestable/
 
 ---
 
-*WireStable is designed and built for the Stablecoins Commerce Stack Challenge. Powered by Circle and Arc.*
+*WireStable — Powered by Circle and Arc.*
