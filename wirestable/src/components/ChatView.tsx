@@ -16,6 +16,7 @@ import { StreamCounter } from "@/components/StreamCounter";
 import { ChannelCard } from "@/components/ChannelCard";
 import { EscrowStatusCard } from "@/components/EscrowStatusCard";
 import { AgentIdentityBadge } from "@/components/AgentIdentityBadge";
+import { ComplianceAlertCard } from "@/components/ComplianceAlertCard";
 
 export function ChatView() {
   const [input, setInput] = useState("");
@@ -217,6 +218,21 @@ export function ChatView() {
                         isSending={isSending}
                         timeLeft={fx.timeLeft}
                         activeQuote={fx.activeQuote}
+                      />
+                    );
+
+                  case "compliance-warning":
+                    if (!msg.complianceDetails) return null;
+                    return (
+                      <ComplianceAlertCard
+                        key={msg.id}
+                        recipientAddress={msg.complianceDetails.recipientAddress}
+                        amount={msg.complianceDetails.amount}
+                        asset={msg.complianceDetails.asset}
+                        riskScore={msg.complianceDetails.riskScore}
+                        reason={msg.complianceDetails.reason}
+                        senderAddress={msg.complianceDetails.senderAddress}
+                        senderEmail={msg.complianceDetails.senderEmail}
                       />
                     );
 

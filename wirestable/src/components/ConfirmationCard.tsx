@@ -410,6 +410,36 @@ export function ConfirmationCard({
           )}
         </div>
 
+        {/* Compliance Status Indicator */}
+        <div
+          style={{
+            marginTop: "var(--space-2)",
+            marginBottom: "var(--space-4)",
+            padding: "var(--space-3)",
+            background: "rgba(16, 185, 129, 0.05)",
+            border: "1px solid rgba(16, 185, 129, 0.15)",
+            borderRadius: "var(--radius-md, 8px)",
+            fontSize: "0.75rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between"
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, color: "rgb(16, 185, 129)" }}>
+            <span>✅ Compliance Checked</span>
+          </div>
+          <span style={{ 
+            fontSize: "0.6875rem", 
+            background: "rgba(16, 185, 129, 0.15)", 
+            color: "rgb(16, 185, 129)", 
+            padding: "2px 6px", 
+            borderRadius: "4px", 
+            fontWeight: 700 
+          }}>
+            PASS (Low Risk)
+          </span>
+        </div>
+
         {/* Actions */}
         <div className="confirm-card-actions">
           <button

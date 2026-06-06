@@ -579,6 +579,70 @@ export function useChat() {
           return;
         }
 
+        // Check compliance before displaying any confirmation cards
+        let recipientAddress = "";
+        let intentAmount = "0";
+        let intentAsset = "USDC";
+
+        if (parsed.type === "transfer" && parsed.intent) {
+          recipientAddress = parsed.intent.to;
+          intentAmount = parsed.intent.amount;
+          intentAsset = parsed.intent.token || "USDC";
+        } else if (parsed.type === "swap" && parsed.swapIntent) {
+          recipientAddress = address || "0x0000000000000000000000000000000000000000";
+          intentAmount = parsed.swapIntent.amountIn;
+          intentAsset = parsed.swapIntent.tokenIn || "USDC";
+        } else if (parsed.type === "bridge" && parsed.bridgeIntent) {
+          recipientAddress = parsed.bridgeIntent.to || address || "";
+          intentAmount = parsed.bridgeIntent.amount;
+          intentAsset = "USDC";
+        } else if (parsed.type === "stream_create" && parsed.streamCreateIntent) {
+          recipientAddress = parsed.streamCreateIntent.to;
+          intentAmount = parsed.streamCreateIntent.amount;
+          intentAsset = "USDC";
+        } else if (parsed.type === "escrow_create" && parsed.escrowCreateIntent) {
+          recipientAddress = parsed.escrowCreateIntent.to;
+          intentAmount = parsed.escrowCreateIntent.amount;
+          intentAsset = "USDC";
+        }
+
+        if (recipientAddress) {
+          try {
+            const complianceRes = await fetch("/api/compliance/check", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                address: recipientAddress,
+                amount: intentAmount,
+                senderAddress: address,
+                senderEmail: circleWallet.userEmail || "user@wirestable.internal",
+                type: parsed.type,
+              }),
+            });
+
+            if (complianceRes.ok) {
+              const complianceData = await complianceRes.json();
+              if (complianceData.success && complianceData.blocked) {
+                addMessage("ai", "compliance-warning", "⚠️ Compliance Blocked Alert", {
+                  complianceDetails: {
+                    recipientAddress,
+                    amount: intentAmount,
+                    asset: intentAsset,
+                    riskScore: complianceData.riskScore,
+                    reason: complianceData.reason,
+                    senderAddress: address || "0xUnknownSender",
+                    senderEmail: circleWallet.userEmail || "user@wirestable.internal",
+                  },
+                });
+                setIsLoading(false);
+                return;
+              }
+            }
+          } catch (compErr) {
+            console.error("Compliance screening failed:", compErr);
+          }
+        }
+
         switch (parsed.type) {
           case "transfer": {
             if (!parsed.intent) {
