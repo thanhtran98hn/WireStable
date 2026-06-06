@@ -17,6 +17,7 @@ import { ChannelCard } from "@/components/ChannelCard";
 import { EscrowStatusCard } from "@/components/EscrowStatusCard";
 import { AgentIdentityBadge } from "@/components/AgentIdentityBadge";
 import { ComplianceAlertCard } from "@/components/ComplianceAlertCard";
+import { UnifiedPortfolioCard } from "@/components/UnifiedPortfolioCard";
 
 export function ChatView() {
   const [input, setInput] = useState("");
@@ -202,7 +203,7 @@ export function ChatView() {
         {/* Left Side: Conversational Workspace */}
         <div style={{ display: "flex", flexDirection: "column", height: "100%", minWidth: 0 }}>
           {messages.length === 0 ? (
-            <EmptyState onSuggestionClick={handleSuggestionClick} />
+            <EmptyState onSuggestionClick={handleSuggestionClick} address={address} />
           ) : (
             <div className="chat-messages">
               {messages.map((msg) => {
@@ -324,6 +325,15 @@ export function ChatView() {
                     );
 
                   default:
+                    if (msg.extra?.isUnifiedPortfolio) {
+                      return (
+                        <UnifiedPortfolioCard
+                          key={msg.id}
+                          unifiedBalance={msg.extra.unifiedBalance}
+                          chains={msg.extra.chains}
+                        />
+                      );
+                    }
                     return <ChatBubble key={msg.id} message={msg} />;
                 }
               })}
