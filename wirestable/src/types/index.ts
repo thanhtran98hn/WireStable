@@ -90,6 +90,9 @@ export interface ChatMessage {
   explorerUrl?: string;
   /** Custom data payload */
   extra?: any;
+  /** Agent identity signature */
+  agentSignature?: string;
+  agentPayloadHash?: string;
   /** Error details for MCP explainer */
   errorDetails?: {
     code: string;
@@ -111,6 +114,8 @@ export interface ParseResponse {
   escrowSubmitIntent?: EscrowSubmitIntent;
   errorCode?: string;
   message: string;
+  agentSignature?: string;
+  agentPayloadHash?: string;
 }
 
 /** MCP error explanation */
