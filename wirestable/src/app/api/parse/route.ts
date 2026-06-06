@@ -12,11 +12,12 @@ const SYSTEM_PROMPT = `You are WireStable, an AI remittance assistant that helps
 Your job is to parse user messages and extract their intent. You MUST respond with valid JSON only.
 
 ## Intent Types:
-1. **transfer** — User wants to send USDC or EURC to someone
-2. **swap** — User wants to exchange/swap their USDC for EURC (or vice versa)
+1. **transfer** — User wants to send USDC or EURC to someone on Arc
+2. **swap** — User wants to exchange/swap their USDC for EURC (or vice versa) on Arc
 3. **error_query** — User is asking about a transaction error code
 4. **greeting** — User is saying hello or asking what you can do
 5. **general** — Any other question about USDC, Arc, or crypto
+6. **bridge** — User wants to bridge/move/transfer USDC from an external network (like Base, Arbitrum, Sepolia) to Arc Testnet.
 
 ## For "transfer" intents, extract:
 - amount: The USDC amount as a string (e.g., "100", "1000.50")
@@ -31,6 +32,12 @@ Your job is to parse user messages and extract their intent. You MUST respond wi
 - tokenOut: The token to buy (either "USDC" or "EURC")
 - chain: Always "Arc_Testnet"
 
+## For "bridge" intents, extract:
+- amount: The USDC amount to bridge as a string (e.g., "50")
+- sourceChain: The origin blockchain name mentioned (e.g., "Sepolia", "Base", "Arbitrum")
+- destinationChain: Always "Arc_Testnet"
+- to: The recipient address on Arc Testnet (e.g., a 0x... address). If they say "bridge 50 USDC from Base to Arc", set this to the recipient address mentioned or leave empty/set to user's address if not specified.
+
 ## For "error_query" intents, extract:
 - errorCode: The error code number (e.g., "155104")
 
@@ -39,18 +46,19 @@ Your job is to parse user messages and extract their intent. You MUST respond wi
 - If the user doesn't specify an amount, set amount to "" and ask.
 - USDC amounts should be reasonable (0.01 to 1,000,000).
 - Always respond in the same language the user uses.
-- The chain is ALWAYS "Arc_Testnet". Even if the user says "Arc", use "Arc_Testnet".
+- The destination chain is ALWAYS "Arc_Testnet".
 
 ## Response Format:
 {
-  "type": "transfer" | "swap" | "error_query" | "general" | "greeting",
+  "type": "transfer" | "swap" | "error_query" | "general" | "greeting" | "bridge",
   "intent": { "amount": "...", "to": "0x...", "chain": "Arc_Testnet", "token": "USDC", "recipientName": "..." },
   "swapIntent": { "amountIn": "...", "tokenIn": "USDC", "tokenOut": "EURC", "chain": "Arc_Testnet" },
+  "bridgeIntent": { "amount": "...", "sourceChain": "...", "destinationChain": "Arc_Testnet", "to": "0x..." },
   "errorCode": "...",
   "message": "A friendly, conversational response to the user"
 }
 
-Only include "intent" for transfer type. Only include "swapIntent" for swap type. Only include "errorCode" for error_query type.`;
+Only include "intent" for transfer type. Only include "swapIntent" for swap type. Only include "bridgeIntent" for bridge type. Only include "errorCode" for error_query type.`;
 
 export async function POST(request: NextRequest) {
   try {
@@ -146,6 +154,35 @@ export async function POST(request: NextRequest) {
       parsed.swapIntent.chain = "Arc_Testnet";
       if (!tokenIn) parsed.swapIntent.tokenIn = "USDC";
       if (!tokenOut) parsed.swapIntent.tokenOut = "EURC";
+    }
+
+    // Validate bridge intent
+    if (parsed.type === "bridge" && parsed.bridgeIntent) {
+      const { to, amount, sourceChain } = parsed.bridgeIntent;
+      
+      if (to && (!/^0x[a-fA-F0-9]{40}$/.test(to))) {
+        parsed.bridgeIntent.to = "";
+        parsed.message = `The wallet address doesn't look right. Please provide a valid Ethereum address. ${parsed.message || ""}`;
+      }
+
+      if (amount) {
+        const numAmount = parseFloat(amount);
+        if (isNaN(numAmount) || numAmount <= 0) {
+          parsed.bridgeIntent.amount = "";
+          parsed.message = `The amount doesn't seem valid. Please specify a positive USDC amount. ${parsed.message || ""}`;
+        }
+      }
+
+      // Map/Standardize source chain
+      let cleanSource = "Sepolia";
+      if (sourceChain) {
+        const sc = sourceChain.toLowerCase();
+        if (sc.includes("base")) cleanSource = "Base";
+        else if (sc.includes("arbitrum") || sc.includes("arb")) cleanSource = "Arbitrum";
+        else if (sc.includes("sepolia") || sc.includes("ethereum") || sc.includes("eth")) cleanSource = "Sepolia";
+      }
+      parsed.bridgeIntent.sourceChain = cleanSource;
+      parsed.bridgeIntent.destinationChain = "Arc_Testnet";
     }
 
     return NextResponse.json(parsed);

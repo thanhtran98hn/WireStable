@@ -14,6 +14,13 @@ export interface SwapIntent {
   chain: "Arc_Testnet";
 }
 
+export interface BridgeIntent {
+  amount: string;
+  sourceChain: string; // e.g., "Sepolia", "Base", "Arbitrum"
+  destinationChain: "Arc_Testnet";
+  to: string;
+}
+
 /** Gas estimation result */
 export interface GasEstimate {
   fee: string;
@@ -28,7 +35,8 @@ export type MessageType =
   | "confirmation"
   | "tx-status"
   | "error-explanation"
-  | "typing";
+  | "typing"
+  | "bridge-progress";
 
 export interface ChatMessage {
   id: string;
@@ -40,6 +48,8 @@ export interface ChatMessage {
   intent?: TransferIntent;
   /** Attached swap intent for swap confirmation card */
   swapIntent?: SwapIntent;
+  /** Attached bridge intent for bridging */
+  bridgeIntent?: BridgeIntent;
   /** Gas estimate for confirmation */
   gasEstimate?: GasEstimate;
   /** Transaction hash after send */
@@ -59,9 +69,10 @@ export interface ChatMessage {
 
 /** LLM parse response from API */
 export interface ParseResponse {
-  type: "transfer" | "swap" | "error_query" | "general" | "greeting";
+  type: "transfer" | "swap" | "error_query" | "general" | "greeting" | "bridge";
   intent?: TransferIntent;
   swapIntent?: SwapIntent;
+  bridgeIntent?: BridgeIntent;
   errorCode?: string;
   message: string;
 }

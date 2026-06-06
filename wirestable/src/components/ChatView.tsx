@@ -10,10 +10,12 @@ import { ConfirmationCard } from "@/components/ConfirmationCard";
 import { TxTracker } from "@/components/TxTracker";
 import { ErrorExplainer } from "@/components/ErrorExplainer";
 import { EmptyState } from "@/components/EmptyState";
+import { CirclePinModal } from "@/components/CirclePinModal";
+import { BridgeProgressCard } from "@/components/BridgeProgressCard";
 
 export function ChatView() {
   const [input, setInput] = useState("");
-  const { isConnected, address } = useAccount();
+  const { isConnected: isWeb3Connected, address: web3Address } = useAccount();
   const {
     messages,
     isLoading,
@@ -22,7 +24,17 @@ export function ChatView() {
     confirmTransfer,
     cancelTransfer,
     messagesEndRef,
+    circleWallet,
+    showOnboardModal,
+    setShowOnboardModal,
+    cctp,
   } = useChat();
+
+  const [email, setEmail] = useState("");
+  const [onboardError, setOnboardError] = useState<string | null>(null);
+
+  const isConnected = isWeb3Connected || !!circleWallet.walletAddress;
+  const address = web3Address || circleWallet.walletAddress;
 
   const {
     isListening,
@@ -71,6 +83,22 @@ export function ChatView() {
     handleSend(suggestion);
   };
 
+  const handleOnboardSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOnboardError(null);
+    if (!email || !email.includes("@")) {
+      setOnboardError("Please enter a valid email address.");
+      return;
+    }
+    const success = await circleWallet.registerUser(email);
+    if (success) {
+      setShowOnboardModal(false);
+      setEmail("");
+    } else {
+      setOnboardError(circleWallet.error || "Failed to register or login.");
+    }
+  };
+
   return (
     <div className="app-container">
       {/* Header */}
@@ -90,11 +118,44 @@ export function ChatView() {
                 Arc Testnet
               </div>
             )}
-            <ConnectButton
-              accountStatus="avatar"
-              chainStatus="icon"
-              showBalance={true}
-            />
+            
+            {circleWallet.walletAddress ? (
+              <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-full px-3 py-1.5 text-xs text-slate-200">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="font-medium text-[11px] text-slate-400">Circle Wallet:</span>
+                <span className="font-mono text-[11px] text-slate-200">{circleWallet.walletAddress.slice(0, 6)}...{circleWallet.walletAddress.slice(-4)}</span>
+                {circleWallet.balance !== null && (
+                  <span className="bg-blue-500/15 text-blue-400 px-1.5 py-0.5 rounded-md font-semibold text-[10px]">
+                    {parseFloat(circleWallet.balance).toFixed(2)} USDC
+                  </span>
+                )}
+                <button
+                  onClick={circleWallet.disconnect}
+                  className="text-slate-400 hover:text-white transition-colors cursor-pointer ml-1 font-bold"
+                  title="Disconnect"
+                  type="button"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <>
+                <ConnectButton
+                  accountStatus="avatar"
+                  chainStatus="icon"
+                  showBalance={true}
+                />
+                {!isWeb3Connected && (
+                  <button
+                    onClick={() => setShowOnboardModal(true)}
+                    className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 active:scale-95 transition-all shadow-md shadow-blue-500/20"
+                    type="button"
+                  >
+                    📧 Email Login
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -124,6 +185,24 @@ export function ChatView() {
 
                 case "error-explanation":
                   return <ErrorExplainer key={msg.id} message={msg} />;
+
+                case "bridge-progress":
+                  return (
+                    <BridgeProgressCard
+                      key={msg.id}
+                      step={cctp.step}
+                      burnHash={cctp.burnHash}
+                      mintHash={cctp.mintHash}
+                      messageHash={cctp.messageHash}
+                      attestationSignature={cctp.attestationSignature}
+                      error={cctp.error}
+                      amount={msg.bridgeIntent?.amount || "0"}
+                      sourceChain={msg.bridgeIntent?.sourceChain || "Sepolia"}
+                      destinationChain={msg.bridgeIntent?.destinationChain || "Arc_Testnet"}
+                      toAddress={msg.bridgeIntent?.to || address || ""}
+                      onClose={cctp.resetBridge}
+                    />
+                  );
 
                 default:
                   return <ChatBubble key={msg.id} message={msg} />;
@@ -292,6 +371,101 @@ export function ChatView() {
           </div>
         </div>
       </main>
+
+      {/* Circle UCW PIN Modal */}
+      <CirclePinModal
+        isOpen={circleWallet.simulatedChallengeActive}
+        type={circleWallet.pendingSimulatedChallenge?.type || null}
+        onConfirm={(pin) => {
+          if (circleWallet.pendingSimulatedChallenge) {
+            circleWallet.pendingSimulatedChallenge.callback(true);
+          }
+        }}
+        onCancel={() => {
+          if (circleWallet.pendingSimulatedChallenge) {
+            circleWallet.pendingSimulatedChallenge.callback(false);
+          }
+        }}
+      />
+
+      {/* Web2 Onboarding Modal */}
+      {showOnboardModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/90 p-8 shadow-2xl backdrop-blur-xl">
+            {/* Decorative bg */}
+            <div className="absolute -top-10 -left-10 h-32 w-32 rounded-full bg-blue-500/10 blur-2xl"></div>
+            <div className="absolute -bottom-10 -right-10 h-32 w-32 rounded-full bg-indigo-500/10 blur-2xl"></div>
+
+            <div className="relative z-10 text-center mb-6">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400">
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.206"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-white">Sign In with Email</h3>
+              <p className="mt-2 text-sm text-slate-400">
+                Create or access your conversational global remittance wallet on Arc Testnet via Circle.
+              </p>
+            </div>
+
+            <form onSubmit={handleOnboardSubmit} className="relative z-10 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="e.g. user@domain.com"
+                  required
+                  className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3.5 text-sm text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+                  disabled={circleWallet.isLoading}
+                />
+              </div>
+
+              {onboardError && (
+                <p className="text-xs text-rose-500 font-semibold">{onboardError}</p>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowOnboardModal(false)}
+                  className="w-1/3 rounded-2xl border border-slate-800 py-3.5 text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800 active:scale-95 transition-all"
+                  disabled={circleWallet.isLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="w-2/3 rounded-2xl bg-blue-600 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-500 disabled:opacity-50 active:scale-95 transition-all"
+                  disabled={circleWallet.isLoading}
+                >
+                  {circleWallet.isLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="spinner h-4 w-4" /> Processing...
+                    </span>
+                  ) : (
+                    "Send Request"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

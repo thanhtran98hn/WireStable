@@ -15,11 +15,12 @@ export function ConfirmationCard({
   onCancel,
   isSending,
 }: ConfirmationCardProps) {
-  const { intent, swapIntent, gasEstimate } = message;
+  const { intent, swapIntent, bridgeIntent, gasEstimate } = message;
 
-  if (!intent && !swapIntent) return null;
+  if (!intent && !swapIntent && !bridgeIntent) return null;
   
   const isSwap = !!swapIntent;
+  const isBridge = !!bridgeIntent;
 
   return (
     <div className="chat-bubble chat-bubble-ai" style={{ maxWidth: "460px" }}>
@@ -34,10 +35,10 @@ export function ConfirmationCard({
       <div className="confirm-card">
         {/* Header */}
         <div className="confirm-card-header">
-          <div className="confirm-card-icon">{isSwap ? "💱" : "💸"}</div>
+          <div className="confirm-card-icon">{isSwap ? "💱" : isBridge ? "🌉" : "💸"}</div>
           <div>
             <div className="confirm-card-title">
-              {isSwap ? `Confirm Swap to ${swapIntent?.tokenOut}` : `Confirm ${intent?.token || "USDC"} Transfer`}
+              {isSwap ? `Confirm Swap to ${swapIntent?.tokenOut}` : isBridge ? "Confirm CCTP Bridge" : `Confirm ${intent?.token || "USDC"} Transfer`}
             </div>
             <div className="confirm-card-subtitle">
               Review the details below before confirming
@@ -47,9 +48,9 @@ export function ConfirmationCard({
 
         {/* Amount */}
         <div className="confirm-card-row">
-          <span className="confirm-card-label">{isSwap ? "Swap Amount" : "Amount"}</span>
+          <span className="confirm-card-label">{isSwap ? "Swap Amount" : isBridge ? "Bridge Amount" : "Amount"}</span>
           <span className="confirm-card-value amount">
-            {isSwap ? `${swapIntent?.amountIn} ${swapIntent?.tokenIn}` : `${intent?.amount} ${intent?.token || "USDC"}`}
+            {isSwap ? `${swapIntent?.amountIn} ${swapIntent?.tokenIn}` : isBridge ? `${bridgeIntent?.amount} USDC` : `${intent?.amount} ${intent?.token || "USDC"}`}
           </span>
         </div>
 
@@ -61,6 +62,15 @@ export function ConfirmationCard({
               {/* For mock purposes, assuming 1:1 or showing unknown */}
               ~{swapIntent?.amountIn} {swapIntent?.tokenOut}
             </span>
+          </div>
+        ) : isBridge ? (
+          <div className="confirm-card-row">
+            <span className="confirm-card-label">To (Arc Recipient)</span>
+            <div style={{ textAlign: "right" }}>
+              <span className="confirm-card-address" title={bridgeIntent?.to}>
+                {bridgeIntent?.to}
+              </span>
+            </div>
           </div>
         ) : (
           <div className="confirm-card-row">
@@ -78,27 +88,46 @@ export function ConfirmationCard({
           </div>
         )}
 
-        {/* Network */}
-        <div className="confirm-card-row">
-          <span className="confirm-card-label">Network</span>
-          <span className="confirm-card-value">
-            <span className="network-badge">
-              <span className="network-dot" />
-              Arc Testnet
+        {/* Network / Bridge Route */}
+        {isBridge ? (
+          <>
+            <div className="confirm-card-row">
+              <span className="confirm-card-label">Source Network</span>
+              <span className="confirm-card-value" style={{ fontWeight: 600, color: "#94a3b8" }}>
+                {bridgeIntent?.sourceChain} (Sandbox)
+              </span>
+            </div>
+            <div className="confirm-card-row">
+              <span className="confirm-card-label">Destination Network</span>
+              <span className="confirm-card-value" style={{ fontWeight: 600, color: "#34d399" }}>
+                Arc Testnet
+              </span>
+            </div>
+          </>
+        ) : (
+          <div className="confirm-card-row">
+            <span className="confirm-card-label">Network</span>
+            <span className="confirm-card-value">
+              <span className="network-badge">
+                <span className="network-dot" />
+                Arc Testnet
+              </span>
             </span>
-          </span>
-        </div>
+          </div>
+        )}
 
         {/* Gas Fee */}
-        <div className="confirm-card-row">
-          <span className="confirm-card-label">Est. Gas Fee</span>
-          <span className="confirm-card-value" style={{ fontSize: "0.8125rem" }}>
-            {gasEstimate?.fee || "~0.001"} USDC
-          </span>
-        </div>
+        {!isBridge && (
+          <div className="confirm-card-row">
+            <span className="confirm-card-label">Est. Gas Fee</span>
+            <span className="confirm-card-value" style={{ fontSize: "0.8125rem" }}>
+              {gasEstimate?.fee || "~0.001"} USDC
+            </span>
+          </div>
+        )}
 
-        {/* Total (Only for transfers, omit for swaps since it's just a gas fee) */}
-        {!isSwap && (
+        {/* Total (Only for transfers, omit for swaps & bridges since they have custom paths) */}
+        {!isSwap && !isBridge && (
           <div
             className="confirm-card-row"
             style={{
@@ -142,10 +171,10 @@ export function ConfirmationCard({
             {isSending ? (
               <>
                 <span className="spinner" />
-                {isSwap ? "Swapping..." : "Sending..."}
+                {isSwap ? "Swapping..." : isBridge ? "Bridging..." : "Sending..."}
               </>
             ) : (
-              isSwap ? "🔄 Confirm Swap" : "✅ Confirm & Sign"
+              isSwap ? "🔄 Confirm Swap" : isBridge ? "🌉 Confirm Bridge" : "✅ Confirm & Sign"
             )}
           </button>
         </div>
@@ -160,9 +189,9 @@ export function ConfirmationCard({
             lineHeight: 1.4,
           }}
         >
-          🔒 Your wallet will prompt you to sign this transaction.
+          🔒 Your wallet will prompt you to sign.
           <br />
-          Funds will be sent on Arc Testnet only.
+          {isBridge ? `Bridging utilizes Circle CCTP burn-and-mint mechanism.` : `Funds will be sent on Arc Testnet only.`}
         </p>
       </div>
     </div>

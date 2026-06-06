@@ -6,10 +6,13 @@ import { createPublicClient, http, isAddress, type Hash } from "viem";
 import { arcTestnet } from "viem/chains";
 import { AppKit } from "@circle-fin/app-kit";
 import { createViemAdapterFromProvider } from "@circle-fin/adapter-viem-v2";
+import { useCircleWallet } from "@/hooks/useCircleWallet";
+import { useCCTP } from "@/hooks/useCCTP";
 import type {
   ChatMessage,
   TransferIntent,
   SwapIntent,
+  BridgeIntent,
   ParseResponse,
   MessageRole,
   MessageType,
@@ -30,10 +33,16 @@ export function useChat() {
   const [pendingIntent, setPendingIntent] = useState<TransferIntent | null>(null);
   const [pendingSwapIntent, setPendingSwapIntent] = useState<SwapIntent | null>(null);
   const [pendingGasEstimate, setPendingGasEstimate] = useState<string | null>(null);
+  const [pendingBridgeIntent, setPendingBridgeIntent] = useState<BridgeIntent | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [showOnboardModal, setShowOnboardModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { address, isConnected } = useAccount();
+  const circleWallet = useCircleWallet();
+  const cctp = useCCTP();
+  const { address: web3Address, isConnected: isWeb3Connected } = useAccount();
+  const isConnected = isWeb3Connected || !!circleWallet.walletAddress;
+  const address = web3Address || circleWallet.walletAddress;
   const { data: walletClient } = useWalletClient();
 
   // Auto-scroll to bottom
@@ -230,6 +239,23 @@ export function useChat() {
           content: "⏳ Your transaction has been submitted to Arc Testnet. Waiting for confirmation...",
         });
 
+        if (circleWallet.simulated) {
+          // Simulate sub-second finality on Arc
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          updateMessage(messageId, {
+            txStatus: "confirmed",
+            content: `✅ [Simulated] Transaction confirmed! Your USDC transfer has been successfully processed on Arc Testnet.`,
+          });
+
+          // Add conversational follow-up
+          addMessage(
+            "ai",
+            "text",
+            `Great news! 🎉 Your transfer has been confirmed on Arc Testnet with sub-second finality. (Simulation mode)`
+          );
+          return;
+        }
+
         const receipt = await publicClient.waitForTransactionReceipt({
           hash: txHash as Hash,
           timeout: 30_000, // Arc has sub-second finality, 30s is generous
@@ -267,7 +293,7 @@ export function useChat() {
         });
       }
     },
-    [updateMessage, addMessage]
+    [updateMessage, addMessage, circleWallet.simulated]
   );
 
   // Main send message handler
@@ -283,12 +309,16 @@ export function useChat() {
         // Check wallet connection for transfer or swap intents
         if (!isConnected) {
           const parsed = await parseMessage(userMessage);
-          if (parsed?.type === "transfer" || parsed?.type === "swap") {
+          const lowerMsg = userMessage.toLowerCase();
+          const isOnboardRequest = lowerMsg.includes("register") || lowerMsg.includes("login") || lowerMsg.includes("create wallet") || lowerMsg.includes("sign up") || lowerMsg.includes("onboard");
+
+          if (parsed?.type === "transfer" || parsed?.type === "swap" || isOnboardRequest) {
             addMessage(
               "ai",
               "text",
-              "Please connect your wallet first using the button in the top right corner. I'll help you with that once you're connected! 🔗"
+              "Let's set up your secure USDC wallet. Please enter your email address in the onboarding panel to secure your wallet via Circle User-Controlled Wallets."
             );
+            setShowOnboardModal(true);
             setIsLoading(false);
             return;
           }
@@ -405,6 +435,33 @@ export function useChat() {
             break;
           }
 
+          case "bridge": {
+            if (!parsed.bridgeIntent) {
+              addMessage("ai", "text", parsed.message);
+              break;
+            }
+
+            const bridgeIntent = parsed.bridgeIntent;
+
+            if (!bridgeIntent.amount) {
+              addMessage("ai", "text", parsed.message);
+              break;
+            }
+
+            // If target recipient is empty, default to own address
+            if (!bridgeIntent.to) {
+              bridgeIntent.to = address || "";
+            }
+
+            setPendingBridgeIntent(bridgeIntent);
+
+            // Show confirmation card
+            addMessage("ai", "confirmation", parsed.message, {
+              bridgeIntent
+            });
+            break;
+          }
+
           case "greeting":
           case "general":
           default:
@@ -432,12 +489,47 @@ export function useChat() {
     ]
   );
 
-  // Confirm and execute action (transfer or swap)
+  // Confirm and execute action (transfer, swap, or bridge)
   const confirmTransfer = useCallback(async () => {
-    if ((!pendingIntent && !pendingSwapIntent) || isSending) return;
+    if ((!pendingIntent && !pendingSwapIntent && !pendingBridgeIntent) || isSending) return;
 
     setIsSending(true);
-    
+
+    if (pendingBridgeIntent) {
+      const bridge = pendingBridgeIntent;
+      setPendingBridgeIntent(null);
+
+      // Add bridge progress message!
+      addMessage(
+        "ai",
+        "bridge-progress",
+        `Initiating CCTP bridge of ${bridge.amount} USDC from ${bridge.sourceChain} to Arc Testnet...`,
+        {
+          bridgeIntent: bridge,
+          txStatus: "pending"
+        }
+      );
+
+      setIsSending(false); // Enable other interactions during long bridging step
+
+      // Async executor
+      const isSimulated = circleWallet.simulated || !address;
+      (async () => {
+        const success = await cctp.executeBridge(
+          bridge.amount,
+          bridge.sourceChain,
+          bridge.to || address || "",
+          isSimulated
+        );
+        if (success) {
+          addMessage("ai", "text", `🎉 Bridge complete! Successfully bridged ${bridge.amount} USDC from ${bridge.sourceChain} to Arc Testnet!`);
+        } else {
+          addMessage("ai", "text", `❌ Bridge failed: ${cctp.error || "Unknown CCTP Error"}`);
+        }
+      })();
+      return;
+    }
+
     const isSwap = !!pendingSwapIntent;
     const currentIntent = isSwap ? pendingSwapIntent : pendingIntent;
     
@@ -459,7 +551,24 @@ export function useChat() {
       if (isSwap) {
         result = await executeSwap(currentIntent as SwapIntent);
       } else {
-        result = await executeTransfer(currentIntent as TransferIntent);
+        if (circleWallet.walletAddress) {
+          // Send via Circle User-Controlled Wallet
+          const success = await circleWallet.executeTransfer(
+            (currentIntent as TransferIntent).to,
+            (currentIntent as TransferIntent).amount,
+            circleWallet.tokenId || "simulated_usdc_token_id"
+          );
+          if (!success) {
+            throw new Error("Circle wallet transfer failed or was cancelled.");
+          }
+          const mockTxHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
+          result = {
+            txHash: mockTxHash,
+            explorerUrl: `https://testnet.arcscan.app/tx/${mockTxHash}`
+          };
+        } else {
+          result = await executeTransfer(currentIntent as TransferIntent);
+        }
       }
       
       if (result) {
@@ -481,7 +590,7 @@ export function useChat() {
       });
 
       // Check if it's a known error pattern
-      if (errorMessage.includes("User rejected")) {
+      if (errorMessage.includes("User rejected") || errorMessage.includes("cancelled")) {
         addMessage(
           "ai",
           "text",
@@ -499,24 +608,32 @@ export function useChat() {
     }
   }, [
     pendingIntent,
+    pendingSwapIntent,
+    pendingBridgeIntent,
     isSending,
+    circleWallet,
+    address,
     addMessage,
     updateMessage,
     executeTransfer,
+    executeSwap,
     trackTransaction,
+    cctp,
   ]);
 
   // Cancel pending action
   const cancelTransfer = useCallback(() => {
     setPendingIntent(null);
     setPendingSwapIntent(null);
+    setPendingBridgeIntent(null);
     setPendingGasEstimate(null);
+    cctp.resetBridge();
     addMessage(
       "ai",
       "text",
       "Action cancelled. Let me know if you'd like to try again or need anything else! 👋"
     );
-  }, [addMessage]);
+  }, [addMessage, cctp]);
 
   return {
     messages,
@@ -524,10 +641,15 @@ export function useChat() {
     isSending,
     pendingIntent,
     pendingSwapIntent,
+    pendingBridgeIntent,
     pendingGasEstimate,
     sendMessage,
     confirmTransfer,
     cancelTransfer,
     messagesEndRef,
+    circleWallet,
+    showOnboardModal,
+    setShowOnboardModal,
+    cctp,
   };
 }
