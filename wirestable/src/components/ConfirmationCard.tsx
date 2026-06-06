@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { recoverMessageAddress } from "viem";
 import type { ChatMessage } from "@/types";
 
 interface ConfirmationCardProps {
@@ -20,6 +22,45 @@ export function ConfirmationCard({
   activeQuote,
 }: ConfirmationCardProps) {
   const { intent, swapIntent, bridgeIntent, streamCreateIntent, escrowCreateIntent, escrowSubmitIntent, gasEstimate } = message;
+
+  const [signatureStatus, setSignatureStatus] = useState<"verifying" | "valid" | "invalid" | "unsigned">("verifying");
+  const [recoveredAgent, setRecoveredAgent] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function verifySignature() {
+      const { agentSignature, agentPayloadHash } = message;
+      if (!agentSignature || !agentPayloadHash) {
+        setSignatureStatus("unsigned");
+        return;
+      }
+
+      try {
+        const signerAddress = await recoverMessageAddress({
+          message: { raw: agentPayloadHash as `0x${string}` },
+          signature: agentSignature as `0x${string}`,
+        });
+        
+        const res = await fetch("/api/agent/identity");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.agentAddress.toLowerCase() === signerAddress.toLowerCase()) {
+            setSignatureStatus("valid");
+            setRecoveredAgent(data.agentAddress);
+          } else {
+            setSignatureStatus("invalid");
+          }
+        } else {
+          setSignatureStatus("valid");
+          setRecoveredAgent(signerAddress);
+        }
+      } catch (err) {
+        console.error("Signature verification failed:", err);
+        setSignatureStatus("invalid");
+      }
+    }
+
+    verifySignature();
+  }, [message]);
 
   if (!intent && !swapIntent && !bridgeIntent && !streamCreateIntent && !escrowCreateIntent && !escrowSubmitIntent) return null;
   
@@ -307,6 +348,68 @@ export function ConfirmationCard({
           </div>
         )}
 
+        {/* Agent Cryptographic Signature Verification Badge */}
+        <div 
+          style={{
+            marginTop: "var(--space-4)",
+            marginBottom: "var(--space-4)",
+            padding: "var(--space-3)",
+            background: signatureStatus === "valid" 
+              ? "rgba(16, 185, 129, 0.05)" 
+              : signatureStatus === "invalid" 
+                ? "rgba(239, 68, 68, 0.05)" 
+                : "rgba(107, 114, 128, 0.05)",
+            border: `1px solid ${
+              signatureStatus === "valid" 
+                ? "rgba(16, 185, 129, 0.15)" 
+                : signatureStatus === "invalid" 
+                  ? "rgba(239, 68, 68, 0.15)" 
+                  : "rgba(107, 114, 128, 0.15)"
+            }`,
+            borderRadius: "var(--radius-md, 8px)",
+            fontSize: "0.75rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px"
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600 }}>
+            {signatureStatus === "verifying" && (
+              <>
+                <span className="spinner" style={{ width: "12px", height: "12px", border: "2px solid var(--color-primary)", borderTopColor: "transparent", borderRadius: "50%", display: "inline-block", animation: "spin 1s linear infinite" }} />
+                <span style={{ color: "var(--color-text-secondary)" }}>Verifying Agent Signature...</span>
+              </>
+            )}
+            {signatureStatus === "valid" && (
+              <>
+                <span style={{ color: "rgb(16, 185, 129)" }}>🛡️ Verifiable ERC-8004 Payload</span>
+              </>
+            )}
+            {signatureStatus === "invalid" && (
+              <>
+                <span style={{ color: "rgb(239, 68, 68)" }}>⚠️ Signature Verification Failed</span>
+              </>
+            )}
+            {signatureStatus === "unsigned" && (
+              <>
+                <span style={{ color: "var(--color-text-tertiary)" }}>❔ Unsigned Payload</span>
+              </>
+            )}
+          </div>
+          {signatureStatus === "valid" && recoveredAgent && (
+            <div style={{ fontSize: "0.6875rem", color: "var(--color-text-secondary)", lineHeight: 1.4 }}>
+              Payload hash: <code style={{ fontSize: "0.625rem" }}>{message.agentPayloadHash?.slice(0, 16)}...</code>
+              <br />
+              Signer: <code style={{ fontSize: "0.625rem" }}>{recoveredAgent}</code>
+            </div>
+          )}
+          {signatureStatus === "invalid" && (
+            <div style={{ fontSize: "0.6875rem", color: "var(--color-error)" }}>
+              The signature attached to this intent payload is invalid. Proceeding is disabled.
+            </div>
+          )}
+        </div>
+
         {/* Actions */}
         <div className="confirm-card-actions">
           <button
@@ -321,7 +424,7 @@ export function ConfirmationCard({
           <button
             className="btn btn-primary btn-lg"
             onClick={onConfirm}
-            disabled={isSending || isExpired}
+            disabled={isSending || isExpired || signatureStatus === "invalid" || signatureStatus === "verifying"}
             id="confirm-transfer-btn"
             style={{ flex: 2 }}
           >

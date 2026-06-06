@@ -15,6 +15,7 @@ import { BridgeProgressCard } from "@/components/BridgeProgressCard";
 import { StreamCounter } from "@/components/StreamCounter";
 import { ChannelCard } from "@/components/ChannelCard";
 import { EscrowStatusCard } from "@/components/EscrowStatusCard";
+import { AgentIdentityBadge } from "@/components/AgentIdentityBadge";
 
 export function ChatView() {
   const [input, setInput] = useState("");
@@ -134,6 +135,7 @@ export function ChatView() {
             <a href="/admin" className="btn btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none", fontSize: "11px", fontWeight: "bold", padding: "6px 12px", borderRadius: "8px" }}>
               🏢 Enterprise Admin
             </a>
+            <AgentIdentityBadge />
             {isConnected && (
               <div className="network-badge">
                 <span className="network-dot" />

@@ -617,6 +617,8 @@ export function useChat() {
                 gas: 0n,
                 gasPrice: 0n,
               },
+              agentSignature: parsed.agentSignature,
+              agentPayloadHash: parsed.agentPayloadHash,
             });
             break;
           }
@@ -657,6 +659,8 @@ export function useChat() {
                 gas: 0n,
                 gasPrice: 0n,
               },
+              agentSignature: parsed.agentSignature,
+              agentPayloadHash: parsed.agentPayloadHash,
             });
             break;
           }
@@ -709,7 +713,9 @@ export function useChat() {
 
             // Show confirmation card
             addMessage("ai", "confirmation", parsed.message, {
-              bridgeIntent
+              bridgeIntent,
+              agentSignature: parsed.agentSignature,
+              agentPayloadHash: parsed.agentPayloadHash,
             });
             break;
           }
@@ -744,7 +750,9 @@ export function useChat() {
                 fee: "~0.005",
                 gas: 0n,
                 gasPrice: 0n
-              }
+              },
+              agentSignature: parsed.agentSignature,
+              agentPayloadHash: parsed.agentPayloadHash,
             });
             break;
           }
@@ -813,7 +821,9 @@ export function useChat() {
                 fee: "~0.003",
                 gas: 0n,
                 gasPrice: 0n
-              }
+              },
+              agentSignature: parsed.agentSignature,
+              agentPayloadHash: parsed.agentPayloadHash,
             });
             break;
           }
@@ -839,7 +849,9 @@ export function useChat() {
                 fee: "~0.001",
                 gas: 0n,
                 gasPrice: 0n
-              }
+              },
+              agentSignature: parsed.agentSignature,
+              agentPayloadHash: parsed.agentPayloadHash,
             });
             break;
           }
