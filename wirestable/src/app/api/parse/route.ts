@@ -18,6 +18,9 @@ Your job is to parse user messages and extract their intent. You MUST respond wi
 4. **greeting** — User is saying hello or asking what you can do
 5. **general** — Any other question about USDC, Arc, or crypto
 6. **bridge** — User wants to bridge/move/transfer USDC from an external network (like Base, Arbitrum, Sepolia) to Arc Testnet.
+7. **corporate_batch** — User wants to pay, disburse, or execute a corporate/contractor payroll batch from the treasury.
+8. **stream_create** — User wants to start, create, or initiate a continuous salary stream of tokens (USDC) to a recipient address on Arc.
+9. **stream_withdraw** — User wants to withdraw, claim, or pull accrued earnings/funds from their salary stream on Arc.
 
 ## For "transfer" intents, extract:
 - amount: The USDC amount as a string (e.g., "100", "1000.50")
@@ -38,6 +41,16 @@ Your job is to parse user messages and extract their intent. You MUST respond wi
 - destinationChain: Always "Arc_Testnet"
 - to: The recipient address on Arc Testnet (e.g., a 0x... address). If they say "bridge 50 USDC from Base to Arc", set this to the recipient address mentioned or leave empty/set to user's address if not specified.
 
+## For "stream_create" intents, extract:
+- amount: The weekly, monthly, or total USDC amount to stream (e.g. "100")
+- ratePerSecond: The flow rate of micro-USDC (6 decimals) per second. Example: if 100 USDC per week, ratePerSecond is "165" (which is ~100 USDC / 604800 seconds * 10^6).
+- to: The recipient wallet address (starts with 0x, 42 characters)
+- durationSeconds: The length of stream in seconds (e.g. "604800" for a week, "2592000" for a month)
+
+## For "stream_withdraw" intents, extract:
+- streamId: The stream ID integer (e.g. "1" or "2"), or "1" if not specified.
+- amount: The amount user wants to withdraw if they specified it (e.g. "50"), or empty if they want to withdraw all.
+
 ## For "error_query" intents, extract:
 - errorCode: The error code number (e.g., "155104")
 
@@ -50,15 +63,17 @@ Your job is to parse user messages and extract their intent. You MUST respond wi
 
 ## Response Format:
 {
-  "type": "transfer" | "swap" | "error_query" | "general" | "greeting" | "bridge",
+  "type": "transfer" | "swap" | "error_query" | "general" | "greeting" | "bridge" | "corporate_batch" | "stream_create" | "stream_withdraw",
   "intent": { "amount": "...", "to": "0x...", "chain": "Arc_Testnet", "token": "USDC", "recipientName": "..." },
   "swapIntent": { "amountIn": "...", "tokenIn": "USDC", "tokenOut": "EURC", "chain": "Arc_Testnet" },
   "bridgeIntent": { "amount": "...", "sourceChain": "...", "destinationChain": "Arc_Testnet", "to": "0x..." },
+  "streamCreateIntent": { "amount": "...", "ratePerSecond": "...", "to": "0x...", "durationSeconds": "..." },
+  "streamWithdrawIntent": { "streamId": "...", "amount": "..." },
   "errorCode": "...",
   "message": "A friendly, conversational response to the user"
 }
 
-Only include "intent" for transfer type. Only include "swapIntent" for swap type. Only include "bridgeIntent" for bridge type. Only include "errorCode" for error_query type.`;
+Only include corresponding intent block based on the type.`;
 
 export async function POST(request: NextRequest) {
   try {

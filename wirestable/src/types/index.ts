@@ -21,6 +21,18 @@ export interface BridgeIntent {
   to: string;
 }
 
+export interface StreamCreateIntent {
+  amount: string;
+  ratePerSecond: string;
+  to: string;
+  durationSeconds: string;
+}
+
+export interface StreamWithdrawIntent {
+  streamId: string;
+  amount?: string;
+}
+
 /** Gas estimation result */
 export interface GasEstimate {
   fee: string;
@@ -36,7 +48,8 @@ export type MessageType =
   | "tx-status"
   | "error-explanation"
   | "typing"
-  | "bridge-progress";
+  | "bridge-progress"
+  | "stream-counter";
 
 export interface ChatMessage {
   id: string;
@@ -50,6 +63,9 @@ export interface ChatMessage {
   swapIntent?: SwapIntent;
   /** Attached bridge intent for bridging */
   bridgeIntent?: BridgeIntent;
+  /** Attached stream create/withdraw intents */
+  streamCreateIntent?: StreamCreateIntent;
+  streamWithdrawIntent?: StreamWithdrawIntent;
   /** Gas estimate for confirmation */
   gasEstimate?: GasEstimate;
   /** Transaction hash after send */
@@ -58,6 +74,8 @@ export interface ChatMessage {
   txStatus?: "pending" | "confirmed" | "failed";
   /** Explorer URL */
   explorerUrl?: string;
+  /** Custom data payload */
+  extra?: any;
   /** Error details for MCP explainer */
   errorDetails?: {
     code: string;
@@ -69,10 +87,12 @@ export interface ChatMessage {
 
 /** LLM parse response from API */
 export interface ParseResponse {
-  type: "transfer" | "swap" | "error_query" | "general" | "greeting" | "bridge";
+  type: "transfer" | "swap" | "error_query" | "general" | "greeting" | "bridge" | "corporate_batch" | "stream_create" | "stream_withdraw";
   intent?: TransferIntent;
   swapIntent?: SwapIntent;
   bridgeIntent?: BridgeIntent;
+  streamCreateIntent?: StreamCreateIntent;
+  streamWithdrawIntent?: StreamWithdrawIntent;
   errorCode?: string;
   message: string;
 }

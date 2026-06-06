@@ -37,7 +37,13 @@ export function TxTracker({ message }: TxTrackerProps) {
                 : "⏳"}
             </span>
             <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
-              {txStatus === "confirmed"
+              {message.swapIntent
+                ? txStatus === "confirmed"
+                  ? "Swap Confirmed"
+                  : txStatus === "failed"
+                  ? "Swap Failed"
+                  : "Processing Swap..."
+                : txStatus === "confirmed"
                 ? "Transfer Confirmed"
                 : txStatus === "failed"
                 ? "Transfer Failed"

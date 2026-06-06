@@ -69,7 +69,7 @@ export function BridgeProgressCard({
 
   const getStepStatus = (item: typeof stepsList[0]) => {
     if (step === "failed") {
-      if (item.activeSteps.includes(step) || (item.id === "origin" && step === "switching-origin")) {
+      if (item.activeSteps.includes(step as any) || (item.id === "origin" && (step as any) === "switching-origin")) {
         return "error";
       }
       // If we failed at a step, later steps are pending, previous are done

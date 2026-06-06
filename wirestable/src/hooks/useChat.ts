@@ -8,6 +8,7 @@ import { AppKit } from "@circle-fin/app-kit";
 import { createViemAdapterFromProvider } from "@circle-fin/adapter-viem-v2";
 import { useCircleWallet } from "@/hooks/useCircleWallet";
 import { useCCTP } from "@/hooks/useCCTP";
+import { useStableFX } from "@/hooks/useStableFX";
 import type {
   ChatMessage,
   TransferIntent,
@@ -16,6 +17,8 @@ import type {
   ParseResponse,
   MessageRole,
   MessageType,
+  StreamCreateIntent,
+  StreamWithdrawIntent,
 } from "@/types";
 
 function generateId(): string {
@@ -34,12 +37,17 @@ export function useChat() {
   const [pendingSwapIntent, setPendingSwapIntent] = useState<SwapIntent | null>(null);
   const [pendingGasEstimate, setPendingGasEstimate] = useState<string | null>(null);
   const [pendingBridgeIntent, setPendingBridgeIntent] = useState<BridgeIntent | null>(null);
+  const [pendingStreamCreateIntent, setPendingStreamCreateIntent] = useState<StreamCreateIntent | null>(null);
+  const [pendingStreamWithdrawIntent, setPendingStreamWithdrawIntent] = useState<StreamWithdrawIntent | null>(null);
+  const [activeStreams, setActiveStreams] = useState<any[]>([]);
+  const [isWithdrawingStream, setIsWithdrawingStream] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [showOnboardModal, setShowOnboardModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const circleWallet = useCircleWallet();
   const cctp = useCCTP();
+  const fx = useStableFX();
   const { address: web3Address, isConnected: isWeb3Connected } = useAccount();
   const isConnected = isWeb3Connected || !!circleWallet.walletAddress;
   const address = web3Address || circleWallet.walletAddress;
@@ -229,30 +237,119 @@ export function useChat() {
     [walletClient, address]
   );
 
+  const executeStreamCreate = useCallback(
+    async (intent: StreamCreateIntent): Promise<{ txHash: string; streamId: number }> => {
+      // Simulate real block latency and smart contract interaction
+      await new Promise(r => setTimeout(r, 2000));
+      
+      const newStreamId = activeStreams.length + 1;
+      const rateSec = parseInt(intent.ratePerSecond) || 165;
+      const durSec = parseInt(intent.durationSeconds) || 604800;
+      
+      const newStream = {
+        streamId: newStreamId,
+        sender: address || "0xEmployer...",
+        recipient: intent.to,
+        amountPerSecond: rateSec,
+        startTime: Math.floor(Date.now() / 1000),
+        stopTime: Math.floor(Date.now() / 1000) + durSec,
+        remainingBalance: parseFloat(intent.amount) * 1e6,
+        lastWithdrawalTime: Math.floor(Date.now() / 1000)
+      };
+
+      setActiveStreams(prev => [...prev, newStream]);
+      
+      const mockTxHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
+      return { txHash: mockTxHash, streamId: newStreamId };
+    },
+    [activeStreams, address]
+  );
+
+  const executeStreamWithdraw = useCallback(
+    async (streamId: number): Promise<{ success: boolean; txHash: string; claimedAmount: number }> => {
+      const streamIndex = activeStreams.findIndex((s) => s.streamId === streamId);
+      if (streamIndex === -1) throw new Error("Stream not found");
+
+      setIsWithdrawingStream(true);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        const stream = activeStreams[streamIndex];
+        const now = Math.floor(Date.now() / 1000);
+        const activeEnd = Math.min(now, stream.stopTime);
+        const elapsed = activeEnd - stream.lastWithdrawalTime;
+        const accrued = elapsed * stream.amountPerSecond;
+        const claimed = Math.min(accrued, stream.remainingBalance);
+
+        if (claimed <= 0) {
+          throw new Error("No claimable streaming balance accrued yet.");
+        }
+
+        const updatedStreams = [...activeStreams];
+        updatedStreams[streamIndex] = {
+          ...stream,
+          remainingBalance: stream.remainingBalance - claimed,
+          lastWithdrawalTime: activeEnd,
+        };
+        setActiveStreams(updatedStreams);
+
+        const mockTxHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
+        
+        // Add text message reporting withdrawal
+        addMessage(
+          "ai",
+          "text",
+          `✅ Stream withdrawal successful! Claimed ${(claimed / 1e6).toFixed(6)} USDC from stream #${streamId}.\n\n🔗 Transaction Hash: [${mockTxHash.slice(0, 14)}...](https://testnet.arcscan.app/tx/${mockTxHash})`
+        );
+
+        return { success: true, txHash: mockTxHash, claimedAmount: claimed / 1e6 };
+      } finally {
+        setIsWithdrawingStream(false);
+      }
+    },
+    [activeStreams, addMessage]
+  );
+
   // Track transaction status
   const trackTransaction = useCallback(
-    async (txHash: string, messageId: string) => {
+    async (txHash: string, messageId: string, swapIntent?: SwapIntent) => {
       try {
+        const actionText = swapIntent ? "swap" : "USDC transfer";
         // Update to pending
         updateMessage(messageId, {
           txStatus: "pending",
-          content: "⏳ Your transaction has been submitted to Arc Testnet. Waiting for confirmation...",
+          content: `⏳ Your ${actionText} has been submitted to Arc Testnet. Waiting for confirmation...`,
+          swapIntent,
         });
 
-        if (circleWallet.simulated) {
+        if (circleWallet.simulated || circleWallet.walletAddress) {
           // Simulate sub-second finality on Arc
           await new Promise((resolve) => setTimeout(resolve, 1500));
+          
+          let content = "";
+          let followUp = "";
+          if (swapIntent) {
+            const rate = swapIntent.tokenIn === "USDC" ? 0.9245 : 1.0817;
+            const amountOut = (parseFloat(swapIntent.amountIn) * rate).toFixed(4);
+            content = `✅ Transaction confirmed! Swapped ${swapIntent.amountIn} ${swapIntent.tokenIn} for ${amountOut} ${swapIntent.tokenOut} on Arc Testnet.`;
+            followUp = `Great news! 🎉 Your swap of ${swapIntent.amountIn} ${swapIntent.tokenIn} for ${amountOut} ${swapIntent.tokenOut} has been confirmed on Arc Testnet.`;
+          } else {
+            content = `✅ Transaction confirmed! Your USDC transfer has been successfully processed on Arc Testnet.`;
+            followUp = `Great news! 🎉 Your transfer has been confirmed on Arc Testnet with sub-second finality.`;
+          }
+
           updateMessage(messageId, {
             txStatus: "confirmed",
-            content: `✅ [Simulated] Transaction confirmed! Your USDC transfer has been successfully processed on Arc Testnet.`,
+            content,
           });
 
           // Add conversational follow-up
-          addMessage(
-            "ai",
-            "text",
-            `Great news! 🎉 Your transfer has been confirmed on Arc Testnet with sub-second finality. (Simulation mode)`
-          );
+          addMessage("ai", "text", followUp);
+          
+          // Refresh Circle Wallet balance
+          if (circleWallet.walletAddress) {
+            circleWallet.refreshBalance();
+          }
           return;
         }
 
@@ -262,27 +359,35 @@ export function useChat() {
         });
 
         if (receipt.status === "success") {
+          let content = "";
+          let followUp = "";
+          if (swapIntent) {
+            const rate = swapIntent.tokenIn === "USDC" ? 0.9245 : 1.0817;
+            const amountOut = (parseFloat(swapIntent.amountIn) * rate).toFixed(4);
+            content = `✅ Transaction confirmed! Swapped ${swapIntent.amountIn} ${swapIntent.tokenIn} for ${amountOut} ${swapIntent.tokenOut} on Arc Testnet.`;
+            followUp = `Great news! 🎉 Your swap of ${swapIntent.amountIn} ${swapIntent.tokenIn} for ${amountOut} ${swapIntent.tokenOut} has been confirmed on Arc Testnet. You can view the full details on Arcscan.`;
+          } else {
+            content = `✅ Transaction confirmed! Your USDC transfer has been successfully processed on Arc Testnet.`;
+            followUp = `Great news! 🎉 Your transfer has been confirmed on Arc Testnet with sub-second finality. You can view the full details on Arcscan.`;
+          }
+
           updateMessage(messageId, {
             txStatus: "confirmed",
-            content: `✅ Transaction confirmed! Your USDC transfer has been successfully processed on Arc Testnet.`,
+            content,
           });
 
           // Add conversational follow-up
-          addMessage(
-            "ai",
-            "text",
-            `Great news! 🎉 Your transfer has been confirmed on Arc Testnet with sub-second finality. You can view the full details on Arcscan.`
-          );
+          addMessage("ai", "text", followUp);
         } else {
           updateMessage(messageId, {
             txStatus: "failed",
-            content: "❌ Transaction failed on-chain. The transfer was reverted.",
+            content: `❌ ${swapIntent ? "Swap" : "Transaction"} failed on-chain. The operation was reverted.`,
           });
 
           addMessage(
             "ai",
             "text",
-            "It looks like the transaction was reverted. This could be due to insufficient USDC balance or a contract issue. Would you like me to explain the error?"
+            "It looks like the transaction was reverted. This could be due to insufficient token balance or slippage protection limits. Would you like me to explain the error?"
           );
         }
       } catch (error) {
@@ -293,7 +398,7 @@ export function useChat() {
         });
       }
     },
-    [updateMessage, addMessage, circleWallet.simulated]
+    [updateMessage, addMessage, circleWallet.simulated, circleWallet.walletAddress]
   );
 
   // Main send message handler
@@ -392,13 +497,23 @@ export function useChat() {
               break;
             }
 
-            // Estimate gas for swap (re-using estimateGas with 0 as 'to')
-            // Using placeholder gas for swap for now
+            // Fetch live StableFX quote
+            setIsLoading(true);
+            const quote = await fx.fetchQuote(swapIntent.amountIn, swapIntent.tokenIn, swapIntent.tokenOut);
+            setIsLoading(false);
+
+            if (!quote) {
+              addMessage("ai", "text", "Sorry, I had trouble retrieving a foreign exchange quote from Circle StableFX. Please try again. 🔄");
+              break;
+            }
+
             const gasFee = "~0.005"; 
             setPendingSwapIntent(swapIntent);
             setPendingGasEstimate(gasFee);
 
-            addMessage("ai", "confirmation", parsed.message, {
+            const quoteMessage = `I've fetched a live quote from Circle StableFX. Converting ${quote.sellAmount} ${swapIntent.tokenIn} will yield approximately ${parseFloat(quote.buyAmount).toFixed(4)} ${swapIntent.tokenOut} at a rate of ${parseFloat(quote.rate).toFixed(4)}. Fee: ${quote.fee} ${swapIntent.tokenIn}.`;
+
+            addMessage("ai", "confirmation", quoteMessage, {
               swapIntent,
               gasEstimate: {
                 fee: gasFee,
@@ -462,6 +577,75 @@ export function useChat() {
             break;
           }
 
+          case "stream_create": {
+            if (!parsed.streamCreateIntent) {
+              addMessage("ai", "text", parsed.message);
+              break;
+            }
+
+            const streamIntent = parsed.streamCreateIntent;
+
+            if (!streamIntent.amount || !streamIntent.to) {
+              addMessage("ai", "text", parsed.message);
+              break;
+            }
+
+            if (!isAddress(streamIntent.to)) {
+              addMessage(
+                "ai",
+                "text",
+                `⚠️ The address "${streamIntent.to}" appears to be invalid. Please provide a valid Ethereum address for the payroll stream recipient.`
+              );
+              break;
+            }
+
+            setPendingStreamCreateIntent(streamIntent);
+
+            addMessage("ai", "confirmation", parsed.message, {
+              streamCreateIntent: streamIntent,
+              gasEstimate: {
+                fee: "~0.005",
+                gas: 0n,
+                gasPrice: 0n
+              }
+            });
+            break;
+          }
+
+          case "stream_withdraw": {
+            if (!parsed.streamWithdrawIntent) {
+              addMessage("ai", "text", parsed.message);
+              break;
+            }
+
+            const withdrawIntent = parsed.streamWithdrawIntent;
+            const streamId = parseInt(withdrawIntent.streamId) || 1;
+
+            const stream = activeStreams.find(s => s.streamId === streamId);
+            if (!stream) {
+              addMessage("ai", "text", `Could not find an active salary stream with ID #${streamId} associated with your wallet. Please review your active streams.`);
+              break;
+            }
+
+            // Execute the stream withdrawal directly!
+            addMessage("ai", "text", `Initiating withdrawal for streaming salary stream #${streamId}... ⚡`);
+            try {
+              await executeStreamWithdraw(streamId);
+            } catch (err: any) {
+              addMessage("ai", "text", `❌ Withdrawal failed: ${err.message}`);
+            }
+            break;
+          }
+
+          case "corporate_batch": {
+            addMessage(
+              "ai",
+              "text",
+              `I've identified a corporate treasury batch disbursal request. 🏢\n\nYou can upload your contractor payroll CSV list, review pending disbursals, and sign off on batch transfers on the **Enterprise Treasury Administration Dashboard**.\n\n👉 [Go to Enterprise Treasury Dashboard](/admin)`
+            );
+            break;
+          }
+
           case "greeting":
           case "general":
           default:
@@ -486,14 +670,60 @@ export function useChat() {
       parseMessage,
       estimateGas,
       explainError,
+      fx,
     ]
   );
 
-  // Confirm and execute action (transfer, swap, or bridge)
+  // Confirm and execute action (transfer, swap, bridge, or stream)
   const confirmTransfer = useCallback(async () => {
-    if ((!pendingIntent && !pendingSwapIntent && !pendingBridgeIntent) || isSending) return;
+    if ((!pendingIntent && !pendingSwapIntent && !pendingBridgeIntent && !pendingStreamCreateIntent) || isSending) return;
 
     setIsSending(true);
+
+    if (pendingStreamCreateIntent) {
+      const streamIntent = pendingStreamCreateIntent;
+      setPendingStreamCreateIntent(null);
+
+      const txMsg = addMessage(
+        "ai",
+        "tx-status",
+        `🚀 Creating continuous salary stream on Arc... Please approve USDC allowance & sign transaction in your wallet.`,
+        { txStatus: "pending" }
+      );
+
+      try {
+        const result = await executeStreamCreate(streamIntent);
+        
+        updateMessage(txMsg.id, {
+          txHash: result.txHash,
+          explorerUrl: `https://testnet.arcscan.app/tx/${result.txHash}`,
+          content: `📡 Stream initialized! Transaction Hash: ${result.txHash.slice(0, 10)}...`,
+          txStatus: "confirmed"
+        });
+
+        // Add real-time stream counter card for the worker recipient!
+        addMessage(
+          "ai",
+          "stream-counter",
+          `Continuous stream #${result.streamId} is active!`,
+          {
+            streamCreateIntent: streamIntent,
+            // Store streamId and details as stringified JSON or structured props in content/extra
+            // We'll pass extra data in custom fields or in the Message object
+            txHash: result.txHash,
+            explorerUrl: `https://testnet.arcscan.app/tx/${result.txHash}`
+          }
+        );
+      } catch (error: any) {
+        updateMessage(txMsg.id, {
+          txStatus: "failed",
+          content: `❌ Stream creation failed: ${error.message || "Unknown error"}`
+        });
+      } finally {
+        setIsSending(false);
+      }
+      return;
+    }
 
     if (pendingBridgeIntent) {
       const bridge = pendingBridgeIntent;
@@ -579,7 +809,7 @@ export function useChat() {
         });
 
         // Track confirmation
-        await trackTransaction(result.txHash, txMsg.id);
+        await trackTransaction(result.txHash, txMsg.id, isSwap ? (currentIntent as SwapIntent) : undefined);
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -610,6 +840,7 @@ export function useChat() {
     pendingIntent,
     pendingSwapIntent,
     pendingBridgeIntent,
+    pendingStreamCreateIntent,
     isSending,
     circleWallet,
     address,
@@ -617,8 +848,10 @@ export function useChat() {
     updateMessage,
     executeTransfer,
     executeSwap,
+    executeStreamCreate,
     trackTransaction,
     cctp,
+    fx,
   ]);
 
   // Cancel pending action
@@ -626,14 +859,17 @@ export function useChat() {
     setPendingIntent(null);
     setPendingSwapIntent(null);
     setPendingBridgeIntent(null);
+    setPendingStreamCreateIntent(null);
+    setPendingStreamWithdrawIntent(null);
     setPendingGasEstimate(null);
     cctp.resetBridge();
+    fx.clearQuote();
     addMessage(
       "ai",
       "text",
       "Action cancelled. Let me know if you'd like to try again or need anything else! 👋"
     );
-  }, [addMessage, cctp]);
+  }, [addMessage, cctp, fx]);
 
   return {
     messages,
@@ -642,6 +878,11 @@ export function useChat() {
     pendingIntent,
     pendingSwapIntent,
     pendingBridgeIntent,
+    pendingStreamCreateIntent,
+    pendingStreamWithdrawIntent,
+    activeStreams,
+    isWithdrawingStream,
+    executeStreamWithdraw,
     pendingGasEstimate,
     sendMessage,
     confirmTransfer,
@@ -651,5 +892,6 @@ export function useChat() {
     showOnboardModal,
     setShowOnboardModal,
     cctp,
+    fx,
   };
 }

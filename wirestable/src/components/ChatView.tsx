@@ -12,6 +12,7 @@ import { ErrorExplainer } from "@/components/ErrorExplainer";
 import { EmptyState } from "@/components/EmptyState";
 import { CirclePinModal } from "@/components/CirclePinModal";
 import { BridgeProgressCard } from "@/components/BridgeProgressCard";
+import { StreamCounter } from "@/components/StreamCounter";
 
 export function ChatView() {
   const [input, setInput] = useState("");
@@ -28,6 +29,9 @@ export function ChatView() {
     showOnboardModal,
     setShowOnboardModal,
     cctp,
+    fx,
+    executeStreamWithdraw,
+    isWithdrawingStream,
   } = useChat();
 
   const [email, setEmail] = useState("");
@@ -112,6 +116,9 @@ export function ChatView() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+            <a href="/admin" className="btn btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none", fontSize: "11px", fontWeight: "bold", padding: "6px 12px", borderRadius: "8px" }}>
+              🏢 Enterprise Admin
+            </a>
             {isConnected && (
               <div className="network-badge">
                 <span className="network-dot" />
@@ -177,6 +184,8 @@ export function ChatView() {
                       onConfirm={confirmTransfer}
                       onCancel={cancelTransfer}
                       isSending={isSending}
+                      timeLeft={fx.timeLeft}
+                      activeQuote={fx.activeQuote}
                     />
                   );
 
@@ -201,6 +210,33 @@ export function ChatView() {
                       destinationChain={msg.bridgeIntent?.destinationChain || "Arc_Testnet"}
                       toAddress={msg.bridgeIntent?.to || address || ""}
                       onClose={cctp.resetBridge}
+                    />
+                  );
+
+                case "stream-counter":
+                  const streamData = msg.extra || {
+                    streamId: 1,
+                    sender: web3Address || "0xEmployer...",
+                    recipient: msg.streamCreateIntent?.to || "0xRecipient...",
+                    amountPerSecond: parseInt(msg.streamCreateIntent?.ratePerSecond || "165"),
+                    startTime: Math.floor(Date.now() / 1000),
+                    stopTime: Math.floor(Date.now() / 1000) + parseInt(msg.streamCreateIntent?.durationSeconds || "604800"),
+                    remainingBalance: parseFloat(msg.streamCreateIntent?.amount || "100") * 1e6,
+                    lastWithdrawalTime: Math.floor(Date.now() / 1000)
+                  };
+                  return (
+                    <StreamCounter
+                      key={msg.id}
+                      streamId={streamData.streamId}
+                      sender={streamData.sender}
+                      recipient={streamData.recipient}
+                      amountPerSecond={streamData.amountPerSecond}
+                      startTime={streamData.startTime}
+                      stopTime={streamData.stopTime}
+                      remainingBalance={streamData.remainingBalance}
+                      lastWithdrawalTime={streamData.lastWithdrawalTime}
+                      onWithdraw={executeStreamWithdraw}
+                      isWithdrawing={isWithdrawingStream}
                     />
                   );
 
