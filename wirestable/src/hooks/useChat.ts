@@ -10,6 +10,7 @@ import { useCircleWallet } from "@/hooks/useCircleWallet";
 import { useCCTP } from "@/hooks/useCCTP";
 import { useStableFX } from "@/hooks/useStableFX";
 import { useNanopayments } from "@/hooks/useNanopayments";
+import { useSmartAccount } from "@/hooks/useSmartAccount";
 import type {
   ChatMessage,
   TransferIntent,
@@ -64,6 +65,7 @@ export function useChat() {
   const isConnected = isWeb3Connected || !!circleWallet.walletAddress;
   const address = web3Address || circleWallet.walletAddress;
   const { data: walletClient } = useWalletClient();
+  const smartAccount = useSmartAccount(address);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -204,6 +206,59 @@ export function useChat() {
         throw new Error("Wallet not connected");
       }
 
+      // If gasless is enabled, construct a UserOperation and sponsor it via the paymaster API
+      if (smartAccount.isGasless) {
+        try {
+          const callData = `0xa9059cbb000000000000000000000000${intent.to.slice(2).toLowerCase()}0000000000000000000000000000000000000000000000000000000000000000` as `0x${string}`;
+          
+          const userOp = await smartAccount.constructUserOp(
+            intent.to as `0x${string}`,
+            intent.amount,
+            callData
+          );
+
+          if (!userOp) throw new Error("Failed to construct UserOperation");
+
+          const userOpMessage = `UserOp: ${userOp.sender} transfers ${intent.amount} USDC to ${intent.to}`;
+          const signature = await walletClient.signMessage({
+            message: userOpMessage
+          });
+
+          const res = await fetch("/api/paymaster/sponsor", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userOp: {
+                ...userOp,
+                nonce: userOp.nonce.toString(),
+                callGasLimit: userOp.callGasLimit.toString(),
+                verificationGasLimit: userOp.verificationGasLimit.toString(),
+                preVerificationGas: userOp.preVerificationGas.toString(),
+                maxFeePerGas: userOp.maxFeePerGas.toString(),
+                maxPriorityFeePerGas: userOp.maxPriorityFeePerGas.toString()
+              },
+              signature,
+              recipient: intent.to,
+              amount: intent.amount,
+              senderAddress: address
+            })
+          });
+
+          if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.error || "Bundler sponsorship request failed.");
+          }
+
+          const sponsorResult = await res.json();
+          return {
+            txHash: sponsorResult.txHash,
+            explorerUrl: `https://testnet.arcscan.app/tx/${sponsorResult.txHash}`
+          };
+        } catch (err) {
+          console.warn("Gasless execution failed, falling back to standard transfer:", err);
+        }
+      }
+
       // Initialize App Kit with Viem adapter
       // @ts-ignore - Bypass Wagmi to AppKit provider type mismatch
       const viemAdapter = await createViemAdapterFromProvider({ provider: walletClient.transport || window.ethereum });
@@ -230,7 +285,7 @@ export function useChat() {
         throw error;
       }
     },
-    [walletClient, address]
+    [walletClient, address, smartAccount]
   );
 
   // Execute swap using Circle App Kit (StableFX)
@@ -777,6 +832,9 @@ export function useChat() {
               },
               agentSignature: parsed.agentSignature,
               agentPayloadHash: parsed.agentPayloadHash,
+              extra: {
+                smartAccountAddress: smartAccount.smartAccountAddress
+              }
             });
             break;
           }
