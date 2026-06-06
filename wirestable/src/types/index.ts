@@ -33,6 +33,17 @@ export interface StreamWithdrawIntent {
   amount?: string;
 }
 
+export interface EscrowCreateIntent {
+  amount: string;
+  to: string;
+  deliverableHash: string;
+}
+
+export interface EscrowSubmitIntent {
+  jobId: string;
+  url: string;
+}
+
 /** Gas estimation result */
 export interface GasEstimate {
   fee: string;
@@ -49,7 +60,8 @@ export type MessageType =
   | "error-explanation"
   | "typing"
   | "bridge-progress"
-  | "stream-counter";
+  | "stream-counter"
+  | "escrow-card";
 
 export interface ChatMessage {
   id: string;
@@ -66,6 +78,8 @@ export interface ChatMessage {
   /** Attached stream create/withdraw intents */
   streamCreateIntent?: StreamCreateIntent;
   streamWithdrawIntent?: StreamWithdrawIntent;
+  escrowCreateIntent?: EscrowCreateIntent;
+  escrowSubmitIntent?: EscrowSubmitIntent;
   /** Gas estimate for confirmation */
   gasEstimate?: GasEstimate;
   /** Transaction hash after send */
@@ -87,12 +101,14 @@ export interface ChatMessage {
 
 /** LLM parse response from API */
 export interface ParseResponse {
-  type: "transfer" | "swap" | "error_query" | "general" | "greeting" | "bridge" | "corporate_batch" | "stream_create" | "stream_withdraw";
+  type: "transfer" | "swap" | "error_query" | "general" | "greeting" | "bridge" | "corporate_batch" | "stream_create" | "stream_withdraw" | "escrow_create" | "escrow_submit";
   intent?: TransferIntent;
   swapIntent?: SwapIntent;
   bridgeIntent?: BridgeIntent;
   streamCreateIntent?: StreamCreateIntent;
   streamWithdrawIntent?: StreamWithdrawIntent;
+  escrowCreateIntent?: EscrowCreateIntent;
+  escrowSubmitIntent?: EscrowSubmitIntent;
   errorCode?: string;
   message: string;
 }

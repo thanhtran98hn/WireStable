@@ -21,6 +21,8 @@ Your job is to parse user messages and extract their intent. You MUST respond wi
 7. **corporate_batch** — User wants to pay, disburse, or execute a corporate/contractor payroll batch from the treasury.
 8. **stream_create** — User wants to start, create, or initiate a continuous salary stream of tokens (USDC) to a recipient address on Arc.
 9. **stream_withdraw** — User wants to withdraw, claim, or pull accrued earnings/funds from their salary stream on Arc.
+10. **escrow_create** — User wants to create, lock, or start an escrow job or milestone payment for a provider/freelancer/agent on Arc.
+11. **escrow_submit** — User wants to submit a deliverable link or proof of work for an escrow job.
 
 ## For "transfer" intents, extract:
 - amount: The USDC amount as a string (e.g., "100", "1000.50")
@@ -51,6 +53,15 @@ Your job is to parse user messages and extract their intent. You MUST respond wi
 - streamId: The stream ID integer (e.g. "1" or "2"), or "1" if not specified.
 - amount: The amount user wants to withdraw if they specified it (e.g. "50"), or empty if they want to withdraw all.
 
+## For "escrow_create" intents, extract:
+- amount: The USDC amount to lock in escrow as a string (e.g., "500")
+- to: The freelancer/employee/provider wallet address (starts with 0x, 42 characters)
+- deliverableHash: A mock bytes32 description hash (if they mention tasks, e.g. "build a logo", generate a mock hash like "0x48656c6c6f000000000000000000000000000000000000000000000000000000").
+
+## For "escrow_submit" intents, extract:
+- jobId: The job ID integer (e.g., "1")
+- url: The deliverable proof URL link (e.g., "https://github.com/my-freelance-repo")
+
 ## For "error_query" intents, extract:
 - errorCode: The error code number (e.g., "155104")
 
@@ -63,12 +74,14 @@ Your job is to parse user messages and extract their intent. You MUST respond wi
 
 ## Response Format:
 {
-  "type": "transfer" | "swap" | "error_query" | "general" | "greeting" | "bridge" | "corporate_batch" | "stream_create" | "stream_withdraw",
+  "type": "transfer" | "swap" | "error_query" | "general" | "greeting" | "bridge" | "corporate_batch" | "stream_create" | "stream_withdraw" | "escrow_create" | "escrow_submit",
   "intent": { "amount": "...", "to": "0x...", "chain": "Arc_Testnet", "token": "USDC", "recipientName": "..." },
   "swapIntent": { "amountIn": "...", "tokenIn": "USDC", "tokenOut": "EURC", "chain": "Arc_Testnet" },
   "bridgeIntent": { "amount": "...", "sourceChain": "...", "destinationChain": "Arc_Testnet", "to": "0x..." },
   "streamCreateIntent": { "amount": "...", "ratePerSecond": "...", "to": "0x...", "durationSeconds": "..." },
   "streamWithdrawIntent": { "streamId": "...", "amount": "..." },
+  "escrowCreateIntent": { "amount": "...", "to": "0x...", "deliverableHash": "..." },
+  "escrowSubmitIntent": { "jobId": "...", "url": "..." },
   "errorCode": "...",
   "message": "A friendly, conversational response to the user"
 }
@@ -224,6 +237,42 @@ export async function POST(request: NextRequest) {
       }
       parsed.bridgeIntent.sourceChain = cleanSource;
       parsed.bridgeIntent.destinationChain = "Arc_Testnet";
+    }
+
+    // Validate escrow_create intent
+    if (parsed.type === "escrow_create" && parsed.escrowCreateIntent) {
+      const { to, amount } = parsed.escrowCreateIntent;
+      
+      if (to && (!/^0x[a-fA-F0-9]{40}$/.test(to))) {
+        parsed.escrowCreateIntent.to = "";
+        parsed.message = `The employee wallet address doesn't look right. Please provide a valid Ethereum address. ${parsed.message || ""}`;
+      }
+
+      if (amount) {
+        const numAmount = parseFloat(amount);
+        if (isNaN(numAmount) || numAmount <= 0) {
+          parsed.escrowCreateIntent.amount = "";
+          parsed.message = `The escrow amount is invalid. Please specify a positive USDC amount. ${parsed.message || ""}`;
+        }
+      }
+
+      if (!parsed.escrowCreateIntent.deliverableHash) {
+        parsed.escrowCreateIntent.deliverableHash = "0x8e83e5c7075c1c09893d596489b4de5de586616fe78ba574fe328905b9b81b212";
+      }
+    }
+
+    // Validate escrow_submit intent
+    if (parsed.type === "escrow_submit" && parsed.escrowSubmitIntent) {
+      const { jobId, url } = parsed.escrowSubmitIntent;
+      
+      if (!jobId) {
+        parsed.escrowSubmitIntent.jobId = "1";
+      }
+
+      if (url && !url.startsWith("http")) {
+        parsed.escrowSubmitIntent.url = "";
+        parsed.message = `The project delivery URL is invalid. Please provide a valid HTTP or HTTPS link. ${parsed.message || ""}`;
+      }
     }
 
     return NextResponse.json(parsed);
