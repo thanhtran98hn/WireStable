@@ -20,6 +20,8 @@ import type {
   MessageType,
   StreamCreateIntent,
   StreamWithdrawIntent,
+  EscrowCreateIntent,
+  EscrowSubmitIntent,
 } from "@/types";
 
 function generateId(): string {
@@ -41,6 +43,9 @@ export function useChat() {
   const [pendingStreamCreateIntent, setPendingStreamCreateIntent] = useState<StreamCreateIntent | null>(null);
   const [pendingStreamWithdrawIntent, setPendingStreamWithdrawIntent] = useState<StreamWithdrawIntent | null>(null);
   const [activeStreams, setActiveStreams] = useState<any[]>([]);
+  const [pendingEscrowCreateIntent, setPendingEscrowCreateIntent] = useState<EscrowCreateIntent | null>(null);
+  const [pendingEscrowSubmitIntent, setPendingEscrowSubmitIntent] = useState<EscrowSubmitIntent | null>(null);
+  const [escrowJobs, setEscrowJobs] = useState<any[]>([]);
   const [isWithdrawingStream, setIsWithdrawingStream] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [showOnboardModal, setShowOnboardModal] = useState(false);
@@ -329,6 +334,117 @@ export function useChat() {
       }
     },
     [activeStreams, addMessage]
+  );
+
+  const executeEscrowCreate = useCallback(
+    async (intent: EscrowCreateIntent): Promise<{ txHash: string; jobId: number }> => {
+      await new Promise(r => setTimeout(r, 2000));
+      
+      const newJobId = escrowJobs.length + 1;
+      const newJob = {
+        jobId: newJobId,
+        client: address || "0xClient...",
+        provider: intent.to,
+        evaluator: "0x8183e5c7075c1c09893d596489b4de5de586616fe",
+        token: "0x3600000000000000000000000000000000000000",
+        amount: parseFloat(intent.amount),
+        status: "FUNDED",
+        deliverableHash: intent.deliverableHash,
+        deliverableUrl: "",
+        expiry: Math.floor(Date.now() / 1000) + 30 * 86400
+      };
+
+      setEscrowJobs(prev => [...prev, newJob]);
+      
+      const mockTxHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
+      return { txHash: mockTxHash, jobId: newJobId };
+    },
+    [escrowJobs, address]
+  );
+
+  const executeEscrowSubmit = useCallback(
+    async (intent: EscrowSubmitIntent): Promise<{ success: boolean; txHash: string; message: string }> => {
+      const jobId = parseInt(intent.jobId) || 1;
+      const jobIndex = escrowJobs.findIndex(j => j.jobId === jobId);
+      if (jobIndex === -1) throw new Error("Job not found");
+
+      const updatedJobs = [...escrowJobs];
+      const job = updatedJobs[jobIndex];
+      job.deliverableUrl = intent.url;
+      job.status = "SUBMITTED";
+      setEscrowJobs(updatedJobs);
+
+      // Call validation API
+      const res = await fetch("/api/escrow/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, url: intent.url })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Compliance verification failed.");
+      }
+
+      const data = await res.json();
+      
+      // Auto-trigger release after successful verification!
+      await new Promise(r => setTimeout(r, 2000));
+      
+      job.status = "COMPLETED";
+      setEscrowJobs([...updatedJobs]);
+
+      const mockTxHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
+
+      // Add a text message from AI confirming settlement
+      addMessage(
+        "ai",
+        "text",
+        `🎉 **Escrow Job #${jobId} Succeeded & Settled!**\n\nWireStable's compliance agent verified the submission link: \`${intent.url}\`\n\nSignature match: \`${data.signature.slice(0, 16)}...\`\n\nUSDC payout of **${job.amount} USDC** was released on-chain to provider address \`${job.provider}\`.\n\n🔗 Receipt: [${mockTxHash.slice(0, 14)}...](https://testnet.arcscan.app/tx/${mockTxHash})`
+      );
+
+      return { success: true, txHash: mockTxHash, message: data.message };
+    },
+    [escrowJobs, addMessage]
+  );
+
+  const handleEscrowRelease = useCallback(
+    async (jobId: number) => {
+      const jobIndex = escrowJobs.findIndex(j => j.jobId === jobId);
+      if (jobIndex === -1) return;
+      
+      const updatedJobs = [...escrowJobs];
+      const job = updatedJobs[jobIndex];
+      job.status = "COMPLETED";
+      setEscrowJobs(updatedJobs);
+
+      const mockTxHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
+      addMessage(
+        "ai",
+        "text",
+        `✅ Client authorized manual release of Escrow Job #${jobId}. Funds (${job.amount} USDC) have been sent to provider: \`${job.provider}\`.\n\n🔗 Tx Hash: [${mockTxHash.slice(0, 14)}...](https://testnet.arcscan.app/tx/${mockTxHash})`
+      );
+    },
+    [escrowJobs, addMessage]
+  );
+
+  const handleEscrowDispute = useCallback(
+    async (jobId: number) => {
+      const jobIndex = escrowJobs.findIndex(j => j.jobId === jobId);
+      if (jobIndex === -1) return;
+      
+      const updatedJobs = [...escrowJobs];
+      const job = updatedJobs[jobIndex];
+      job.status = "REJECTED";
+      setEscrowJobs(updatedJobs);
+
+      addMessage(
+        "ai",
+        "text",
+        `⚠️ Escrow Job #${jobId} is now under dispute. Payout locked. Senders can reclaim the locked funds after the expiry date or if an agreement is reached.`
+      );
+    },
+    [escrowJobs, addMessage]
   );
 
   // Track transaction status
@@ -667,6 +783,67 @@ export function useChat() {
             break;
           }
 
+          case "escrow_create": {
+            if (!parsed.escrowCreateIntent) {
+              addMessage("ai", "text", parsed.message);
+              break;
+            }
+
+            const escrowIntent = parsed.escrowCreateIntent;
+
+            if (!escrowIntent.amount || !escrowIntent.to) {
+              addMessage("ai", "text", parsed.message);
+              break;
+            }
+
+            if (!isAddress(escrowIntent.to)) {
+              addMessage(
+                "ai",
+                "text",
+                `⚠️ The address "${escrowIntent.to}" is invalid. Please provide a valid Ethereum address for the escrow provider.`
+              );
+              break;
+            }
+
+            setPendingEscrowCreateIntent(escrowIntent);
+
+            addMessage("ai", "confirmation", parsed.message, {
+              escrowCreateIntent: escrowIntent,
+              gasEstimate: {
+                fee: "~0.003",
+                gas: 0n,
+                gasPrice: 0n
+              }
+            });
+            break;
+          }
+
+          case "escrow_submit": {
+            if (!parsed.escrowSubmitIntent) {
+              addMessage("ai", "text", parsed.message);
+              break;
+            }
+
+            const submitIntent = parsed.escrowSubmitIntent;
+
+            if (!submitIntent.jobId || !submitIntent.url) {
+              addMessage("ai", "text", parsed.message);
+              break;
+            }
+
+            setPendingEscrowSubmitIntent(submitIntent);
+
+            addMessage("ai", "confirmation", parsed.message, {
+              escrowSubmitIntent: submitIntent,
+              gasEstimate: {
+                fee: "~0.001",
+                gas: 0n,
+                gasPrice: 0n
+              }
+            });
+            break;
+          }
+
           case "greeting":
           case "general":
           default:
@@ -692,14 +869,91 @@ export function useChat() {
       estimateGas,
       explainError,
       fx,
+      activeStreams,
+      executeStreamWithdraw,
     ]
   );
 
   // Confirm and execute action (transfer, swap, bridge, or stream)
   const confirmTransfer = useCallback(async () => {
-    if ((!pendingIntent && !pendingSwapIntent && !pendingBridgeIntent && !pendingStreamCreateIntent) || isSending) return;
+    if ((!pendingIntent && !pendingSwapIntent && !pendingBridgeIntent && !pendingStreamCreateIntent && !pendingEscrowCreateIntent && !pendingEscrowSubmitIntent) || isSending) return;
 
     setIsSending(true);
+
+    if (pendingEscrowCreateIntent) {
+      const escrowIntent = pendingEscrowCreateIntent;
+      setPendingEscrowCreateIntent(null);
+
+      const txMsg = addMessage(
+        "ai",
+        "tx-status",
+        `🚀 Deploying ERC-8183 Escrow & locking ${escrowIntent.amount} USDC... Please sign the transaction in your wallet.`,
+        { txStatus: "pending" }
+      );
+
+      try {
+        const result = await executeEscrowCreate(escrowIntent);
+        
+        updateMessage(txMsg.id, {
+          txHash: result.txHash,
+          explorerUrl: `https://testnet.arcscan.app/tx/${result.txHash}`,
+          content: `📡 Escrow contract initialized! Transaction Hash: ${result.txHash.slice(0, 10)}...`,
+          txStatus: "confirmed"
+        });
+
+        // Add the escrow status card inside the chat messages!
+        addMessage(
+          "ai",
+          "escrow-card",
+          `Escrow contract #${result.jobId} is active!`,
+          {
+            escrowCreateIntent: escrowIntent,
+            txHash: result.txHash,
+            explorerUrl: `https://testnet.arcscan.app/tx/${result.txHash}`,
+            extra: { jobId: result.jobId }
+          }
+        );
+      } catch (error: any) {
+        updateMessage(txMsg.id, {
+          txStatus: "failed",
+          content: `❌ Escrow creation failed: ${error.message || "Unknown error"}`
+        });
+      } finally {
+        setIsSending(false);
+      }
+      return;
+    }
+
+    if (pendingEscrowSubmitIntent) {
+      const submitIntent = pendingEscrowSubmitIntent;
+      setPendingEscrowSubmitIntent(null);
+
+      const txMsg = addMessage(
+        "ai",
+        "tx-status",
+        `🚀 Submitting deliverable URL proof to compliance agent for Escrow #${submitIntent.jobId}...`,
+        { txStatus: "pending" }
+      );
+
+      try {
+        const result = await executeEscrowSubmit(submitIntent);
+        
+        updateMessage(txMsg.id, {
+          txHash: result.txHash,
+          explorerUrl: `https://testnet.arcscan.app/tx/${result.txHash}`,
+          content: `📡 Submission registered! Running autonomous deliverable validation checks...`,
+          txStatus: "confirmed"
+        });
+      } catch (error: any) {
+        updateMessage(txMsg.id, {
+          txStatus: "failed",
+          content: `❌ Submission failed: ${error.message || "Unknown error"}`
+        });
+      } finally {
+        setIsSending(false);
+      }
+      return;
+    }
 
     if (pendingStreamCreateIntent) {
       const streamIntent = pendingStreamCreateIntent;
@@ -862,6 +1116,8 @@ export function useChat() {
     pendingSwapIntent,
     pendingBridgeIntent,
     pendingStreamCreateIntent,
+    pendingEscrowCreateIntent,
+    pendingEscrowSubmitIntent,
     isSending,
     circleWallet,
     address,
@@ -870,6 +1126,8 @@ export function useChat() {
     executeTransfer,
     executeSwap,
     executeStreamCreate,
+    executeEscrowCreate,
+    executeEscrowSubmit,
     trackTransaction,
     cctp,
     fx,
@@ -882,6 +1140,8 @@ export function useChat() {
     setPendingBridgeIntent(null);
     setPendingStreamCreateIntent(null);
     setPendingStreamWithdrawIntent(null);
+    setPendingEscrowCreateIntent(null);
+    setPendingEscrowSubmitIntent(null);
     setPendingGasEstimate(null);
     cctp.resetBridge();
     fx.clearQuote();
@@ -901,9 +1161,15 @@ export function useChat() {
     pendingBridgeIntent,
     pendingStreamCreateIntent,
     pendingStreamWithdrawIntent,
+    pendingEscrowCreateIntent,
+    pendingEscrowSubmitIntent,
     activeStreams,
+    escrowJobs,
     isWithdrawingStream,
     executeStreamWithdraw,
+    handleEscrowRelease,
+    handleEscrowDispute,
+    executeEscrowSubmit,
     pendingGasEstimate,
     sendMessage,
     confirmTransfer,

@@ -19,13 +19,15 @@ export function ConfirmationCard({
   timeLeft,
   activeQuote,
 }: ConfirmationCardProps) {
-  const { intent, swapIntent, bridgeIntent, streamCreateIntent, gasEstimate } = message;
+  const { intent, swapIntent, bridgeIntent, streamCreateIntent, escrowCreateIntent, escrowSubmitIntent, gasEstimate } = message;
 
-  if (!intent && !swapIntent && !bridgeIntent && !streamCreateIntent) return null;
+  if (!intent && !swapIntent && !bridgeIntent && !streamCreateIntent && !escrowCreateIntent && !escrowSubmitIntent) return null;
   
   const isSwap = !!swapIntent;
   const isBridge = !!bridgeIntent;
   const isStream = !!streamCreateIntent;
+  const isEscrowCreate = !!escrowCreateIntent;
+  const isEscrowSubmit = !!escrowSubmitIntent;
   const isExpired = isSwap && timeLeft === 0;
 
   return (
@@ -41,10 +43,10 @@ export function ConfirmationCard({
       <div className="confirm-card">
         {/* Header */}
         <div className="confirm-card-header">
-          <div className="confirm-card-icon">{isSwap ? "💱" : isBridge ? "🌉" : isStream ? "🌊" : "💸"}</div>
+          <div className="confirm-card-icon">{isSwap ? "💱" : isBridge ? "🌉" : isStream ? "🌊" : isEscrowCreate ? "🔒" : isEscrowSubmit ? "📤" : "💸"}</div>
           <div>
             <div className="confirm-card-title">
-              {isSwap ? `Confirm Swap to ${swapIntent?.tokenOut}` : isBridge ? "Confirm CCTP Bridge" : isStream ? "Confirm Payroll Stream" : `Confirm ${intent?.token || "USDC"} Transfer`}
+              {isSwap ? `Confirm Swap to ${swapIntent?.tokenOut}` : isBridge ? "Confirm CCTP Bridge" : isStream ? "Confirm Payroll Stream" : isEscrowCreate ? "Confirm Escrow Labor Deal" : isEscrowSubmit ? "Confirm Work Submission" : `Confirm ${intent?.token || "USDC"} Transfer`}
             </div>
             <div className="confirm-card-subtitle">
               Review the details below before confirming
@@ -53,12 +55,16 @@ export function ConfirmationCard({
         </div>
 
         {/* Amount */}
-        <div className="confirm-card-row">
-          <span className="confirm-card-label">{isSwap ? "Swap Amount" : isBridge ? "Bridge Amount" : isStream ? "Funding Amount" : "Amount"}</span>
-          <span className="confirm-card-value amount">
-            {isSwap ? `${swapIntent?.amountIn} ${swapIntent?.tokenIn}` : isBridge ? `${bridgeIntent?.amount} USDC` : isStream ? `${streamCreateIntent?.amount} USDC` : `${intent?.amount} ${intent?.token || "USDC"}`}
-          </span>
-        </div>
+        {!isEscrowSubmit && (
+          <div className="confirm-card-row">
+            <span className="confirm-card-label">
+              {isSwap ? "Swap Amount" : isBridge ? "Bridge Amount" : isStream ? "Funding Amount" : isEscrowCreate ? "Locking Amount" : "Amount"}
+            </span>
+            <span className="confirm-card-value amount">
+              {isSwap ? `${swapIntent?.amountIn} ${swapIntent?.tokenIn}` : isBridge ? `${bridgeIntent?.amount} USDC` : isStream ? `${streamCreateIntent?.amount} USDC` : isEscrowCreate ? `${escrowCreateIntent?.amount} USDC` : `${intent?.amount} ${intent?.token || "USDC"}`}
+            </span>
+          </div>
+        )}
 
         {/* Swap Receive / Transfer To */}
         {isSwap ? (
@@ -98,6 +104,44 @@ export function ConfirmationCard({
               <span className="confirm-card-value" style={{ fontWeight: 600 }}>
                 {streamCreateIntent?.durationSeconds === "604800" ? "1 Week" : streamCreateIntent?.durationSeconds === "2592000" ? "1 Month" : `${streamCreateIntent?.durationSeconds} Seconds`}
               </span>
+            </div>
+          </>
+        ) : isEscrowCreate ? (
+          <>
+            <div className="confirm-card-row">
+              <span className="confirm-card-label">Provider (Freelancer)</span>
+              <div style={{ textAlign: "right" }}>
+                <span className="confirm-card-address" title={escrowCreateIntent?.to}>
+                  {escrowCreateIntent?.to}
+                </span>
+              </div>
+            </div>
+            <div className="confirm-card-row">
+              <span className="confirm-card-label">Task Hash</span>
+              <span className="confirm-card-value text-mono" style={{ fontSize: "0.75rem" }}>
+                {escrowCreateIntent?.deliverableHash?.slice(0, 14)}...
+              </span>
+            </div>
+          </>
+        ) : isEscrowSubmit ? (
+          <>
+            <div className="confirm-card-row">
+              <span className="confirm-card-label">Job ID</span>
+              <span className="confirm-card-value font-bold">
+                #{escrowSubmitIntent?.jobId}
+              </span>
+            </div>
+            <div className="confirm-card-row">
+              <span className="confirm-card-label">Submission Link</span>
+              <a
+                href={escrowSubmitIntent?.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="confirm-card-value"
+                style={{ color: "var(--color-primary)", textDecoration: "underline", fontSize: "0.8125rem" }}
+              >
+                {escrowSubmitIntent?.url?.replace("https://", "").slice(0, 24)}...
+              </a>
             </div>
           </>
         ) : (
@@ -239,8 +283,8 @@ export function ConfirmationCard({
           </div>
         )}
 
-        {/* Total (Only for transfers, omit for swaps & bridges since they have custom paths) */}
-        {!isSwap && !isBridge && (
+        {/* Total (Only for transfers & escrow creation, omit for swaps, bridges & submissions) */}
+        {!isSwap && !isBridge && !isStream && !isEscrowSubmit && (
           <div
             className="confirm-card-row"
             style={{
@@ -255,10 +299,10 @@ export function ConfirmationCard({
             </span>
             <span className="confirm-card-value" style={{ fontSize: "1.125rem" }}>
               {(
-                parseFloat(intent?.amount || "0") +
+                parseFloat((isEscrowCreate ? escrowCreateIntent?.amount : intent?.amount) || "0") +
                 parseFloat(gasEstimate?.fee || "0.001")
               ).toFixed(6)}{" "}
-              {intent?.token || "USDC"}
+              {isEscrowCreate ? "USDC" : (intent?.token || "USDC")}
             </span>
           </div>
         )}
@@ -284,10 +328,10 @@ export function ConfirmationCard({
             {isSending ? (
               <>
                 <span className="spinner" />
-                {isSwap ? "Swapping..." : isBridge ? "Bridging..." : "Sending..."}
+                {isSwap ? "Swapping..." : isBridge ? "Bridging..." : isEscrowCreate ? "Locking..." : isEscrowSubmit ? "Submitting..." : "Sending..."}
               </>
             ) : (
-              isExpired ? "Expired" : isSwap ? "🔄 Confirm Swap" : isBridge ? "🌉 Confirm Bridge" : "✅ Confirm & Sign"
+              isExpired ? "Expired" : isSwap ? "🔄 Confirm Swap" : isBridge ? "🌉 Confirm Bridge" : isEscrowCreate ? "🔒 Confirm & Lock" : isEscrowSubmit ? "📤 Confirm Submission" : "✅ Confirm & Sign"
             )}
           </button>
         </div>
@@ -304,7 +348,7 @@ export function ConfirmationCard({
         >
           🔒 Your wallet will prompt you to sign.
           <br />
-          {isBridge ? `Bridging utilizes Circle CCTP burn-and-mint mechanism.` : `Funds will be sent on Arc Testnet only.`}
+          {isBridge ? `Bridging utilizes Circle CCTP burn-and-mint mechanism.` : isEscrowSubmit ? `Submission checks are run off-chain before contract interaction.` : `Funds will be secured on Arc Testnet only.`}
         </p>
       </div>
     </div>

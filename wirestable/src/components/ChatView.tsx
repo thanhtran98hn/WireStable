@@ -14,6 +14,7 @@ import { CirclePinModal } from "@/components/CirclePinModal";
 import { BridgeProgressCard } from "@/components/BridgeProgressCard";
 import { StreamCounter } from "@/components/StreamCounter";
 import { ChannelCard } from "@/components/ChannelCard";
+import { EscrowStatusCard } from "@/components/EscrowStatusCard";
 
 export function ChatView() {
   const [input, setInput] = useState("");
@@ -34,6 +35,10 @@ export function ChatView() {
     executeStreamWithdraw,
     isWithdrawingStream,
     nanopay,
+    escrowJobs,
+    handleEscrowRelease,
+    handleEscrowDispute,
+    executeEscrowSubmit,
   } = useChat();
 
   const [email, setEmail] = useState("");
@@ -261,6 +266,42 @@ export function ChatView() {
                         lastWithdrawalTime={streamData.lastWithdrawalTime}
                         onWithdraw={executeStreamWithdraw}
                         isWithdrawing={isWithdrawingStream}
+                      />
+                    );
+
+                  case "escrow-card":
+                    const escrowJobId = msg.extra?.jobId || 1;
+                    const escrowJob = escrowJobs.find((j) => j.jobId === escrowJobId) || {
+                      jobId: escrowJobId,
+                      client: address || "0xEmployer...",
+                      provider: msg.escrowCreateIntent?.to || "0xProvider...",
+                      evaluator: "0x8183e5c7075c1c09893d596489b4de5de586616fe",
+                      token: "0x3600000000000000000000000000000000000000",
+                      amount: parseFloat(msg.escrowCreateIntent?.amount || "500"),
+                      status: "FUNDED",
+                      deliverableHash: msg.escrowCreateIntent?.deliverableHash || "0xdeliverablehash...",
+                      deliverableUrl: "",
+                      expiry: Math.floor(Date.now() / 1000) + 30 * 86400
+                    };
+                    return (
+                      <EscrowStatusCard
+                        key={msg.id}
+                        jobId={escrowJob.jobId}
+                        client={escrowJob.client}
+                        provider={escrowJob.provider}
+                        evaluator={escrowJob.evaluator}
+                        amount={escrowJob.amount}
+                        status={escrowJob.status}
+                        deliverableHash={escrowJob.deliverableHash}
+                        deliverableUrl={escrowJob.deliverableUrl}
+                        expiry={escrowJob.expiry}
+                        onSubmitDeliverable={async (jId, url) => {
+                          const submitIntent = { jobId: jId.toString(), url };
+                          await executeEscrowSubmit(submitIntent);
+                        }}
+                        onRelease={handleEscrowRelease}
+                        onDispute={handleEscrowDispute}
+                        userAddress={address || undefined}
                       />
                     );
 
