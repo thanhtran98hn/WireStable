@@ -7,6 +7,9 @@ export interface TreasuryWallet {
   address: string;
   usdcBalance: string;
   eurcBalance: string;
+  usycBalance?: string;
+  autoSweep?: boolean;
+  accruedYield?: string;
   status: "active" | "inactive";
   walletSetId: string;
   created: boolean;
@@ -17,6 +20,11 @@ export function useCorporateAdmin() {
   const [batches, setBatches] = useState<PayoutBatch[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Yield tracking states
+  const [autoSweep, setAutoSweep] = useState<boolean>(false);
+  const [usycBalance, setUsycBalance] = useState<string>("0.00");
+  const [accruedYield, setAccruedYield] = useState<string>("0.000000");
 
   // Fetch treasury wallet details
   const fetchTreasuryWallet = useCallback(async () => {
@@ -27,6 +35,9 @@ export function useCorporateAdmin() {
       if (!res.ok) throw new Error("Failed to fetch treasury wallet");
       const data = await res.json();
       setWallet(data);
+      setAutoSweep(data.autoSweep || false);
+      setUsycBalance(data.usycBalance || "0.00");
+      setAccruedYield(data.accruedYield || "0.000000");
     } catch (err: any) {
       setError(err.message || "Failed to query wallet details");
     } finally {
@@ -46,6 +57,9 @@ export function useCorporateAdmin() {
       if (!res.ok) throw new Error("Failed to generate treasury wallet");
       const data = await res.json();
       setWallet(data.wallet);
+      setAutoSweep(data.wallet.autoSweep || false);
+      setUsycBalance(data.wallet.usycBalance || "0.00");
+      setAccruedYield(data.wallet.accruedYield || "0.000000");
       return data.wallet;
     } catch (err: any) {
       setError(err.message || "Failed to generate wallet");
@@ -140,6 +154,31 @@ export function useCorporateAdmin() {
     }
   }, [fetchBatches]);
 
+  // Toggle Auto-Sweep rules via API
+  const toggleAutoSweep = useCallback(async (enabled: boolean) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/corporate/sweep", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ autoSweep: enabled })
+      });
+      if (!res.ok) throw new Error("Failed to configure auto-sweep rule");
+      const data = await res.json();
+      setAutoSweep(data.autoSweep);
+      setUsycBalance(data.usycBalance);
+      setAccruedYield(data.accruedYield);
+      await fetchTreasuryWallet(); // Update USDC and USYC balances
+      return true;
+    } catch (err: any) {
+      setError(err.message || "Failed to toggle auto-sweep");
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchTreasuryWallet]);
+
   // Client-side CSV Parser
   const parseCSV = useCallback((text: string): { recipientName: string; address: string; amount: string }[] => {
     if (!text) return [];
@@ -178,17 +217,34 @@ export function useCorporateAdmin() {
     fetchBatches();
   }, [fetchTreasuryWallet, fetchBatches]);
 
+  // Live yield-ticking effect
+  useEffect(() => {
+    const usycAmount = parseFloat(usycBalance);
+    if (usycAmount <= 0) return;
+
+    const interval = setInterval(() => {
+      const yieldPerSecond = (usycAmount * 0.0515) / (365 * 24 * 3600);
+      setAccruedYield(prev => (parseFloat(prev) + yieldPerSecond).toFixed(8));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [usycBalance]);
+
   return {
     wallet,
     batches,
     isLoading,
     error,
+    autoSweep,
+    usycBalance,
+    accruedYield,
     initializeTreasuryWallet,
     fetchTreasuryWallet,
     fetchBatches,
     submitBatch,
     approveBatch,
     rejectBatch,
+    toggleAutoSweep,
     parseCSV
   };
 }
