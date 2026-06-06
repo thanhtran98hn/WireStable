@@ -18,10 +18,19 @@ import { EscrowStatusCard } from "@/components/EscrowStatusCard";
 import { AgentIdentityBadge } from "@/components/AgentIdentityBadge";
 import { ComplianceAlertCard } from "@/components/ComplianceAlertCard";
 import { UnifiedPortfolioCard } from "@/components/UnifiedPortfolioCard";
+import { CommandPalette } from "@/components/CommandPalette";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 export function ChatView() {
   const [input, setInput] = useState("");
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const { isConnected: isWeb3Connected, address: web3Address } = useAccount();
+
+  useKeyboardShortcuts({
+    onTogglePalette: () => setIsPaletteOpen((prev) => !prev),
+    onClosePalette: () => setIsPaletteOpen(false),
+    isOpen: isPaletteOpen,
+  });
   const {
     messages,
     isLoading,
@@ -471,32 +480,44 @@ export function ChatView() {
                 padding: "var(--space-2) 0",
                 fontSize: "0.6875rem",
                 color: "var(--color-text-tertiary)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px"
               }}
             >
-              Powered by{" "}
-              <a
-                href="https://www.circle.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "var(--color-accent)", textDecoration: "none" }}
-              >
-                Circle
-              </a>{" "}
-              &{" "}
-              <a
-                href="https://docs.arc.network"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "var(--color-accent)", textDecoration: "none" }}
-              >
-                Arc Network
-              </a>{" "}
-              · USDC on Arc Testnet
-              {isConnected && address && (
-                <span style={{ marginLeft: "var(--space-2)" }}>
-                  · {address.slice(0, 6)}...{address.slice(-4)}
-                </span>
-              )}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                <span>Press</span>
+                <kbd className="command-palette-kbd" style={{ fontSize: "9px", padding: "1px 4px" }}>⌘K</kbd>
+                <span>or</span>
+                <kbd className="command-palette-kbd" style={{ fontSize: "9px", padding: "1px 4px" }}>Ctrl+K</kbd>
+                <span>to open Command Palette</span>
+              </div>
+              <div>
+                Powered by{" "}
+                <a
+                  href="https://www.circle.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "var(--color-accent)", textDecoration: "none" }}
+                >
+                  Circle
+                </a>{" "}
+                &{" "}
+                <a
+                  href="https://docs.arc.network"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "var(--color-accent)", textDecoration: "none" }}
+                >
+                  Arc Network
+                </a>{" "}
+                · USDC on Arc Testnet
+                {isConnected && address && (
+                  <span style={{ marginLeft: "var(--space-2)" }}>
+                    · {address.slice(0, 6)}...{address.slice(-4)}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -621,6 +642,13 @@ export function ChatView() {
           </div>
         </div>
       )}
+
+      {/* SpotLight Command Palette */}
+      <CommandPalette
+        isOpen={isPaletteOpen}
+        onClose={() => setIsPaletteOpen(false)}
+        onExecuteCommand={(cmd) => handleSend(cmd)}
+      />
     </div>
   );
 }
