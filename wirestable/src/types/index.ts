@@ -61,7 +61,8 @@ export type MessageType =
   | "typing"
   | "bridge-progress"
   | "stream-counter"
-  | "escrow-card";
+  | "escrow-card"
+  | "compliance-warning";
 
 export interface ChatMessage {
   id: string;
@@ -80,6 +81,16 @@ export interface ChatMessage {
   streamWithdrawIntent?: StreamWithdrawIntent;
   escrowCreateIntent?: EscrowCreateIntent;
   escrowSubmitIntent?: EscrowSubmitIntent;
+  /** Compliance details for Warning Card */
+  complianceDetails?: {
+    recipientAddress: string;
+    amount: string;
+    asset: string;
+    riskScore: number;
+    reason: string;
+    senderAddress: string;
+    senderEmail: string;
+  };
   /** Gas estimate for confirmation */
   gasEstimate?: GasEstimate;
   /** Transaction hash after send */
