@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useCorporateAdmin } from "@/hooks/useCorporateAdmin";
 import { YieldAnalytics } from "@/components/YieldAnalytics";
+import { LPAnalytics } from "@/components/LPAnalytics";
 
 export default function AdminPage() {
   const {
@@ -212,6 +213,9 @@ Charlie (Copywriter),0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1,95.50`;
               isUpdating={isLoading}
             />
           )}
+
+          {/* LP reserves & FX Hedging Section */}
+          {wallet && wallet.created && <LPAnalytics />}
         </section>
 
         {/* Right Side: CSV Payroll Uploader + Maker/Checker Panel */}

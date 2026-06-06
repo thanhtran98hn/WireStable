@@ -20,6 +20,7 @@ import { ComplianceAlertCard } from "@/components/ComplianceAlertCard";
 import { UnifiedPortfolioCard } from "@/components/UnifiedPortfolioCard";
 import { CommandPalette } from "@/components/CommandPalette";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { HedgingLockCard } from "@/components/HedgingLockCard";
 
 export function ChatView() {
   const [input, setInput] = useState("");
@@ -51,6 +52,8 @@ export function ChatView() {
     handleEscrowRelease,
     handleEscrowDispute,
     executeEscrowSubmit,
+    executePurchaseRateLock,
+    addMessage,
   } = useChat();
 
   const [email, setEmail] = useState("");
@@ -334,6 +337,24 @@ export function ChatView() {
                     );
 
                   default:
+                    if (msg.extra?.isRateLockOffer) {
+                      return (
+                        <HedgingLockCard
+                          key={msg.id}
+                          amount={msg.extra.amount}
+                          spotRate={msg.extra.spotRate}
+                          targetRate={msg.extra.targetRate}
+                          premium={msg.extra.premium}
+                          expiration={msg.extra.expiration}
+                          onApprove={(lockId) => {
+                            executePurchaseRateLock(lockId, msg.extra.amount, msg.extra.targetRate);
+                          }}
+                          onCancel={() => {
+                            addMessage("ai", "text", "Rate lock purchase request declined.");
+                          }}
+                        />
+                      );
+                    }
                     if (msg.extra?.isUnifiedPortfolio) {
                       return (
                         <UnifiedPortfolioCard

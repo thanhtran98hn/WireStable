@@ -256,18 +256,29 @@ export function ConfirmationCard({
                 1 {swapIntent?.tokenIn} = {parseFloat(activeQuote.rate).toFixed(4)} {swapIntent?.tokenOut}
               </span>
             </div>
-            <div className="confirm-card-row">
-              <span className="confirm-card-label">Spread / Slippage</span>
-              <span className="confirm-card-value" style={{ fontSize: "0.8125rem" }}>
-                {(parseFloat(activeQuote.spread) * 100).toFixed(2)}% / {(parseFloat(activeQuote.slippage) * 100).toFixed(2)}%
-              </span>
-            </div>
-            <div className="confirm-card-row">
-              <span className="confirm-card-label">StableFX Fee</span>
-              <span className="confirm-card-value" style={{ fontSize: "0.8125rem" }}>
-                {activeQuote.fee} {swapIntent?.tokenIn}
-              </span>
-            </div>
+            {activeQuote.id && activeQuote.id.startsWith("lock-") ? (
+              <div className="confirm-card-row">
+                <span className="confirm-card-label" style={{ color: "var(--color-success)", fontWeight: 600 }}>🛡️ Hedging Status</span>
+                <span className="confirm-card-value" style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--color-success)" }}>
+                  Locked Rate (Option Active)
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className="confirm-card-row">
+                  <span className="confirm-card-label">Spread / Slippage</span>
+                  <span className="confirm-card-value" style={{ fontSize: "0.8125rem" }}>
+                    {(parseFloat(activeQuote.spread) * 100).toFixed(2)}% / {(parseFloat(activeQuote.slippage) * 100).toFixed(2)}%
+                  </span>
+                </div>
+                <div className="confirm-card-row">
+                  <span className="confirm-card-label">StableFX Fee</span>
+                  <span className="confirm-card-value" style={{ fontSize: "0.8125rem" }}>
+                    {activeQuote.fee} {swapIntent?.tokenIn}
+                  </span>
+                </div>
+              </>
+            )}
           </>
         )}
 

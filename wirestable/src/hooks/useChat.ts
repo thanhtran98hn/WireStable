@@ -102,6 +102,13 @@ export function useChat() {
     []
   );
 
+  const [activeRateLock, setActiveRateLock] = useState<{ id: number; amount: number; rate: number; active: boolean } | null>(null);
+
+  const executePurchaseRateLock = useCallback((lockId: number, amount: number, rate: number) => {
+    setActiveRateLock({ id: lockId, amount, rate, active: true });
+    addMessage("ai", "text", `Rate lock Option **#${lockId}** is now **ACTIVE**. Your next swap/transfer of up to ${amount} USDC will settle at the locked rate of **${rate} EURC/USDC**.`);
+  }, [addMessage]);
+
   // Parse message via LLM API
   const parseMessage = useCallback(
     async (userMessage: string): Promise<ParseResponse | null> => {
@@ -609,6 +616,36 @@ export function useChat() {
 
       try {
         const contentLower = userMessage.toLowerCase();
+
+        // Intercept rate lock purchase request
+        if (contentLower.includes("rate lock") || contentLower.includes("lock usdc/eurc") || contentLower.includes("hedg")) {
+          const match = contentLower.match(/(\d+(?:\.\d+)?)/);
+          const amount = match ? parseFloat(match[1]) : 1000;
+          setIsLoading(true);
+          try {
+            const res = await fetch(`/api/fx-hedging/quote?amount=${amount}&targetRate=0.9245`);
+            if (res.ok) {
+              const data = await res.json();
+              addMessage("ai", "text", `Calculating premium for rate-lock option on USDC-EURC corridor:`);
+              addMessage("ai", "text", "FX Rate Lock Offer", {
+                extra: {
+                  isRateLockOffer: true,
+                  amount: data.amount,
+                  spotRate: data.spotRate,
+                  targetRate: data.targetRate,
+                  premium: parseFloat(data.premium),
+                  expiration: data.expiration
+                }
+              });
+              setIsLoading(false);
+              return;
+            }
+          } catch (err) {
+            console.error("Failed to fetch rate lock quote:", err);
+          }
+          setIsLoading(false);
+        }
+
         if (
           contentLower.includes("balance") ||
           contentLower.includes("portfolio") ||
@@ -854,7 +891,26 @@ export function useChat() {
 
             // Fetch live StableFX quote
             setIsLoading(true);
-            const quote = await fx.fetchQuote(swapIntent.amountIn, swapIntent.tokenIn, swapIntent.tokenOut);
+            let quote;
+            if (activeRateLock && activeRateLock.active && swapIntent.tokenIn === "USDC" && swapIntent.tokenOut === "EURC" && parseFloat(swapIntent.amountIn) <= activeRateLock.amount) {
+              const buyAmount = (parseFloat(swapIntent.amountIn) * activeRateLock.rate).toFixed(4);
+              quote = {
+                id: `lock-${activeRateLock.id}`,
+                pair: "USDC-EURC",
+                rate: activeRateLock.rate.toString(),
+                sellAmount: swapIntent.amountIn,
+                buyAmount: buyAmount,
+                fee: "0.0000",
+                spread: "0.0000",
+                slippage: "0.0000",
+                expiresIn: 3600,
+                expiresAt: Date.now() + 3600 * 1000
+              };
+              // Consume rate lock
+              setActiveRateLock(null);
+            } else {
+              quote = await fx.fetchQuote(swapIntent.amountIn, swapIntent.tokenIn, swapIntent.tokenOut);
+            }
             setIsLoading(false);
 
             if (!quote) {
@@ -1493,5 +1549,8 @@ export function useChat() {
     cctp,
     fx,
     nanopay,
+    activeRateLock,
+    executePurchaseRateLock,
+    addMessage,
   };
 }
