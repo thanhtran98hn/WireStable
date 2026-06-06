@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useCorporateAdmin } from "@/hooks/useCorporateAdmin";
+import { YieldAnalytics } from "@/components/YieldAnalytics";
 
 export default function AdminPage() {
   const {
@@ -9,10 +10,14 @@ export default function AdminPage() {
     batches,
     isLoading,
     error,
+    autoSweep,
+    usycBalance,
+    accruedYield,
     initializeTreasuryWallet,
     submitBatch,
     approveBatch,
     rejectBatch,
+    toggleAutoSweep,
     parseCSV
   } = useCorporateAdmin();
 
@@ -67,7 +72,7 @@ Charlie (Copywriter),0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1,95.50`;
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-
+ 
     const file = e.dataTransfer.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -118,8 +123,8 @@ Charlie (Copywriter),0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1,95.50`;
       {/* Main Admin Area */}
       <main className="app-main" style={{ display: "flex", gap: "var(--space-6)", padding: "var(--space-6) 0", flexWrap: "wrap" }}>
         
-        {/* Left Side: Treasury Metrics */}
-        <section style={{ flex: "1 1 300px", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+        {/* Left Side: Treasury Metrics & Yield Sweep */}
+        <section style={{ flex: "1 1 420px", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
           <div className="card" style={{ padding: "var(--space-5)" }}>
             <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "var(--space-2)", color: "var(--color-text-primary)" }}>
               Treasury Wallet Set
@@ -196,10 +201,21 @@ Charlie (Copywriter),0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1,95.50`;
               </div>
             )}
           </div>
+
+          {/* Yield Sweeping Section */}
+          {wallet && wallet.created && (
+            <YieldAnalytics
+              autoSweep={autoSweep}
+              usycBalance={usycBalance}
+              accruedYield={accruedYield}
+              onToggleSweep={toggleAutoSweep}
+              isUpdating={isLoading}
+            />
+          )}
         </section>
 
         {/* Right Side: CSV Payroll Uploader + Maker/Checker Panel */}
-        <section style={{ flex: "2 1 600px", display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
+        <section style={{ flex: "2 1 500px", display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
           
           {/* Uploader Card */}
           <div className="card" style={{ padding: "var(--space-5)" }}>
@@ -370,6 +386,11 @@ Charlie (Copywriter),0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1,95.50`;
                         <div style={{ fontSize: "0.8125rem", fontWeight: 600, marginTop: "2px" }}>
                           Total: {parseFloat(batch.totalAmount).toLocaleString()} {batch.token} ({batch.payouts.length} recipients)
                         </div>
+                        {batch.redemptionNote && (
+                          <div style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: 600, marginTop: "4px" }}>
+                            💡 {batch.redemptionNote}
+                          </div>
+                        )}
                       </div>
 
                       <span
