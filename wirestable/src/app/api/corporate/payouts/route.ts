@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { corporateWallet, updateWallet, calculateAndAccrueYield } from "../store";
 
 export interface Payout {
   recipientName: string;
@@ -15,6 +16,7 @@ export interface PayoutBatch {
   token: "USDC" | "EURC";
   status: "pending_approval" | "approved" | "completed" | "failed";
   createdAt: number;
+  redemptionNote?: string;
 }
 
 // In-memory persistence for payout batches
@@ -96,11 +98,53 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ error: "Batch is not awaiting approval" }, { status: 400 });
       }
 
-      // Transition status to approved
+      // Sync and calculate latest yields
+      calculateAndAccrueYield();
+
+      const totalNeeded = parseFloat(batch.totalAmount);
+      let redemptionNote = "";
+
+      if (batch.token === "USDC") {
+        if (corporateWallet.usdcBalance < totalNeeded) {
+          const shortfall = totalNeeded - corporateWallet.usdcBalance;
+          if (corporateWallet.usycBalance >= shortfall) {
+            // Auto-redemption of USYC to USDC
+            updateWallet({
+              usycBalance: corporateWallet.usycBalance - shortfall,
+              usdcBalance: corporateWallet.usdcBalance + shortfall
+            });
+            redemptionNote = `Auto-redeemed ${shortfall.toFixed(2)} USYC to cover the USDC shortfall.`;
+          } else {
+            return NextResponse.json(
+              { error: `Insufficient treasury funds. Combined liquid USDC + USYC pool has only ${(corporateWallet.usdcBalance + corporateWallet.usycBalance).toFixed(2)} USDC but requires ${totalNeeded.toFixed(2)} USDC.` },
+              { status: 400 }
+            );
+          }
+        }
+        
+        // Deduct USDC from treasury
+        updateWallet({
+          usdcBalance: corporateWallet.usdcBalance - totalNeeded
+        });
+      } else if (batch.token === "EURC") {
+        if (corporateWallet.eurcBalance < totalNeeded) {
+          return NextResponse.json(
+            { error: `Insufficient EURC treasury balance. Required: ${totalNeeded.toFixed(2)} EURC, Available: ${corporateWallet.eurcBalance.toFixed(2)} EURC.` },
+            { status: 400 }
+          );
+        }
+
+        // Deduct EURC from treasury
+        updateWallet({
+          eurcBalance: corporateWallet.eurcBalance - totalNeeded
+        });
+      }
+
+      // Transition status to approved & completed
       batch.status = "approved";
+      batch.redemptionNote = redemptionNote;
 
       // Execute mock sequential transfers via developer-controlled wallet
-      // We will generate simulated tx hashes for each payment and set them to success
       const updatedPayouts = batch.payouts.map((p) => {
         const simulatedHash = `0x${Array.from({ length: 64 }, () =>
           Math.floor(Math.random() * 16).toString(16)
@@ -117,7 +161,9 @@ export async function PUT(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: "Developer-Controlled batch disbarsal executed successfully.",
+        message: redemptionNote 
+          ? `Batch approved successfully. ${redemptionNote}` 
+          : "Developer-Controlled batch disbursal executed successfully.",
         batch
       });
     }
