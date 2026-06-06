@@ -218,15 +218,33 @@ export function ConfirmationCard({
             </div>
           </>
         ) : (
-          <div className="confirm-card-row">
-            <span className="confirm-card-label">Network</span>
-            <span className="confirm-card-value">
-              <span className="network-badge">
-                <span className="network-dot" />
-                Arc Testnet
+          <>
+            <div className="confirm-card-row">
+              <span className="confirm-card-label">Network</span>
+              <span className="confirm-card-value">
+                <span className="network-badge">
+                  <span className="network-dot" />
+                  Arc Testnet
+                </span>
               </span>
-            </span>
-          </div>
+            </div>
+            {message.extra?.smartAccountAddress && (
+              <div className="confirm-card-row">
+                <span className="confirm-card-label">Smart Account (Sender)</span>
+                <div style={{ textAlign: "right" }}>
+                  <a
+                    href={`https://testnet.arcscan.app/address/${message.extra.smartAccountAddress}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="confirm-card-address"
+                    style={{ fontSize: "0.75rem", color: "var(--color-primary)", textDecoration: "underline" }}
+                  >
+                    {message.extra.smartAccountAddress.slice(0, 8)}...{message.extra.smartAccountAddress.slice(-6)}
+                  </a>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Swap Rates Breakdown */}
@@ -317,9 +335,9 @@ export function ConfirmationCard({
         {/* Gas Fee */}
         {!isBridge && (
           <div className="confirm-card-row">
-            <span className="confirm-card-label">Est. Gas Fee</span>
-            <span className="confirm-card-value" style={{ fontSize: "0.8125rem" }}>
-              {gasEstimate?.fee || "~0.001"} USDC
+            <span className="confirm-card-label">Sponsor</span>
+            <span className="confirm-card-value" style={{ fontSize: "0.8125rem", color: "rgb(16, 185, 129)", fontWeight: 700 }}>
+              Active (0.00 USDC Gas)
             </span>
           </div>
         )}
@@ -339,10 +357,7 @@ export function ConfirmationCard({
               Total
             </span>
             <span className="confirm-card-value" style={{ fontSize: "1.125rem" }}>
-              {(
-                parseFloat((isEscrowCreate ? escrowCreateIntent?.amount : intent?.amount) || "0") +
-                parseFloat(gasEstimate?.fee || "0.001")
-              ).toFixed(6)}{" "}
+              {parseFloat((isEscrowCreate ? escrowCreateIntent?.amount : intent?.amount) || "0").toFixed(6)}{" "}
               {isEscrowCreate ? "USDC" : (intent?.token || "USDC")}
             </span>
           </div>
