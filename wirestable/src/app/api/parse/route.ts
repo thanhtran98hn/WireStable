@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { privateKeyToAccount } from "viem/accounts";
+import { keccak256 } from "viem";
 
 function getOpenAI() {
   return new OpenAI({
@@ -272,6 +274,28 @@ export async function POST(request: NextRequest) {
       if (url && !url.startsWith("http")) {
         parsed.escrowSubmitIntent.url = "";
         parsed.message = `The project delivery URL is invalid. Please provide a valid HTTP or HTTPS link. ${parsed.message || ""}`;
+      }
+    }
+
+    // Cryptographically sign the parsed transaction payload hash with the agent key
+    const transactionalTypes = ["transfer", "swap", "bridge", "stream_create", "stream_withdraw", "escrow_create", "escrow_submit"];
+    if (transactionalTypes.includes(parsed.type)) {
+      try {
+        const privateKey = (process.env.AGENT_PRIVATE_KEY || "0x8183e5c7075c1c09893d596489b4de5de586616fe78654c60b9f1d071987c532") as `0x${string}`;
+        const account = privateKeyToAccount(privateKey);
+        
+        const payloadData = {
+          type: parsed.type,
+          intent: parsed.transferIntent || parsed.swapIntent || parsed.bridgeIntent || parsed.streamCreateIntent || parsed.streamWithdrawIntent || parsed.escrowCreateIntent || parsed.escrowSubmitIntent
+        };
+
+        const hash = keccak256(new TextEncoder().encode(JSON.stringify(payloadData)));
+        const signature = await account.signMessage({ message: { raw: hash } });
+
+        parsed.agentSignature = signature;
+        parsed.agentPayloadHash = hash;
+      } catch (signErr) {
+        console.error("Agent payload signing failed:", signErr);
       }
     }
 
