@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { CirclePinModal } from "@/components/CirclePinModal";
 import { BridgeProgressCard } from "@/components/BridgeProgressCard";
 import { StreamCounter } from "@/components/StreamCounter";
+import { ChannelCard } from "@/components/ChannelCard";
 
 export function ChatView() {
   const [input, setInput] = useState("");
@@ -32,10 +33,19 @@ export function ChatView() {
     fx,
     executeStreamWithdraw,
     isWithdrawingStream,
+    nanopay,
   } = useChat();
 
   const [email, setEmail] = useState("");
   const [onboardError, setOnboardError] = useState<string | null>(null);
+  const [isLargeScreen, setIsLargeScreen] = useState(true);
+
+  useEffect(() => {
+    const checkSize = () => setIsLargeScreen(window.innerWidth > 960);
+    checkSize();
+    window.addEventListener("resize", checkSize);
+    return () => window.removeEventListener("resize", checkSize);
+  }, []);
 
   const isConnected = isWeb3Connected || !!circleWallet.walletAddress;
   const address = web3Address || circleWallet.walletAddress;
@@ -167,129 +177,207 @@ export function ChatView() {
         </div>
       </header>
 
-      {/* Main Chat Area */}
-      <main className="app-main">
-        {messages.length === 0 ? (
-          <EmptyState onSuggestionClick={handleSuggestionClick} />
-        ) : (
-          <div className="chat-messages">
-            {messages.map((msg) => {
-              // Render different components based on message type
-              switch (msg.type) {
-                case "confirmation":
-                  return (
-                    <ConfirmationCard
-                      key={msg.id}
-                      message={msg}
-                      onConfirm={confirmTransfer}
-                      onCancel={cancelTransfer}
-                      isSending={isSending}
-                      timeLeft={fx.timeLeft}
-                      activeQuote={fx.activeQuote}
-                    />
-                  );
+      {/* Main Chat Area with Nanopayments Sidebar */}
+      <main
+        className="app-main"
+        style={{
+          maxWidth: "1200px",
+          display: "grid",
+          gridTemplateColumns: isLargeScreen ? "1fr 340px" : "1fr",
+          gap: "var(--space-6)",
+          padding: "var(--space-4) var(--space-6)",
+          width: "100%",
+          margin: "0 auto",
+          flex: 1,
+        }}
+      >
+        {/* Left Side: Conversational Workspace */}
+        <div style={{ display: "flex", flexDirection: "column", height: "100%", minWidth: 0 }}>
+          {messages.length === 0 ? (
+            <EmptyState onSuggestionClick={handleSuggestionClick} />
+          ) : (
+            <div className="chat-messages">
+              {messages.map((msg) => {
+                // Render different components based on message type
+                switch (msg.type) {
+                  case "confirmation":
+                    return (
+                      <ConfirmationCard
+                        key={msg.id}
+                        message={msg}
+                        onConfirm={confirmTransfer}
+                        onCancel={cancelTransfer}
+                        isSending={isSending}
+                        timeLeft={fx.timeLeft}
+                        activeQuote={fx.activeQuote}
+                      />
+                    );
 
-                case "tx-status":
-                  return <TxTracker key={msg.id} message={msg} />;
+                  case "tx-status":
+                    return <TxTracker key={msg.id} message={msg} />;
 
-                case "error-explanation":
-                  return <ErrorExplainer key={msg.id} message={msg} />;
+                  case "error-explanation":
+                    return <ErrorExplainer key={msg.id} message={msg} />;
 
-                case "bridge-progress":
-                  return (
-                    <BridgeProgressCard
-                      key={msg.id}
-                      step={cctp.step}
-                      burnHash={cctp.burnHash}
-                      mintHash={cctp.mintHash}
-                      messageHash={cctp.messageHash}
-                      attestationSignature={cctp.attestationSignature}
-                      error={cctp.error}
-                      amount={msg.bridgeIntent?.amount || "0"}
-                      sourceChain={msg.bridgeIntent?.sourceChain || "Sepolia"}
-                      destinationChain={msg.bridgeIntent?.destinationChain || "Arc_Testnet"}
-                      toAddress={msg.bridgeIntent?.to || address || ""}
-                      onClose={cctp.resetBridge}
-                    />
-                  );
+                  case "bridge-progress":
+                    return (
+                      <BridgeProgressCard
+                        key={msg.id}
+                        step={cctp.step}
+                        burnHash={cctp.burnHash}
+                        mintHash={cctp.mintHash}
+                        messageHash={cctp.messageHash}
+                        attestationSignature={cctp.attestationSignature}
+                        error={cctp.error}
+                        amount={msg.bridgeIntent?.amount || "0"}
+                        sourceChain={msg.bridgeIntent?.sourceChain || "Sepolia"}
+                        destinationChain={msg.bridgeIntent?.destinationChain || "Arc_Testnet"}
+                        toAddress={msg.bridgeIntent?.to || address || ""}
+                        onClose={cctp.resetBridge}
+                      />
+                    );
 
-                case "stream-counter":
-                  const streamData = msg.extra || {
-                    streamId: 1,
-                    sender: web3Address || "0xEmployer...",
-                    recipient: msg.streamCreateIntent?.to || "0xRecipient...",
-                    amountPerSecond: parseInt(msg.streamCreateIntent?.ratePerSecond || "165"),
-                    startTime: Math.floor(Date.now() / 1000),
-                    stopTime: Math.floor(Date.now() / 1000) + parseInt(msg.streamCreateIntent?.durationSeconds || "604800"),
-                    remainingBalance: parseFloat(msg.streamCreateIntent?.amount || "100") * 1e6,
-                    lastWithdrawalTime: Math.floor(Date.now() / 1000)
-                  };
-                  return (
-                    <StreamCounter
-                      key={msg.id}
-                      streamId={streamData.streamId}
-                      sender={streamData.sender}
-                      recipient={streamData.recipient}
-                      amountPerSecond={streamData.amountPerSecond}
-                      startTime={streamData.startTime}
-                      stopTime={streamData.stopTime}
-                      remainingBalance={streamData.remainingBalance}
-                      lastWithdrawalTime={streamData.lastWithdrawalTime}
-                      onWithdraw={executeStreamWithdraw}
-                      isWithdrawing={isWithdrawingStream}
-                    />
-                  );
+                  case "stream-counter":
+                    const streamData = msg.extra || {
+                      streamId: 1,
+                      sender: web3Address || "0xEmployer...",
+                      recipient: msg.streamCreateIntent?.to || "0xRecipient...",
+                      amountPerSecond: parseInt(msg.streamCreateIntent?.ratePerSecond || "165"),
+                      startTime: Math.floor(Date.now() / 1000),
+                      stopTime: Math.floor(Date.now() / 1000) + parseInt(msg.streamCreateIntent?.durationSeconds || "604800"),
+                      remainingBalance: parseFloat(msg.streamCreateIntent?.amount || "100") * 1e6,
+                      lastWithdrawalTime: Math.floor(Date.now() / 1000)
+                    };
+                    return (
+                      <StreamCounter
+                        key={msg.id}
+                        streamId={streamData.streamId}
+                        sender={streamData.sender}
+                        recipient={streamData.recipient}
+                        amountPerSecond={streamData.amountPerSecond}
+                        startTime={streamData.startTime}
+                        stopTime={streamData.stopTime}
+                        remainingBalance={streamData.remainingBalance}
+                        lastWithdrawalTime={streamData.lastWithdrawalTime}
+                        onWithdraw={executeStreamWithdraw}
+                        isWithdrawing={isWithdrawingStream}
+                      />
+                    );
 
-                default:
-                  return <ChatBubble key={msg.id} message={msg} />;
-              }
-            })}
+                  default:
+                    return <ChatBubble key={msg.id} message={msg} />;
+                }
+              })}
 
-            {/* Typing indicator */}
-            {isLoading && (
-              <div className="chat-bubble chat-bubble-ai">
-                <div className="typing-indicator">
-                  <div className="typing-dot" />
-                  <div className="typing-dot" />
-                  <div className="typing-dot" />
+              {/* Typing indicator */}
+              {isLoading && (
+                <div className="chat-bubble chat-bubble-ai">
+                  <div className="typing-indicator">
+                    <div className="typing-dot" />
+                    <div className="typing-dot" />
+                    <div className="typing-dot" />
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div ref={messagesEndRef} />
-          </div>
-        )}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
 
-        {/* Voice error toast */}
-        {voiceError && (
-          <div
-            style={{
-              padding: "var(--space-3) var(--space-4)",
-              background: "var(--color-warning-bg)",
-              borderRadius: "var(--radius-md)",
-              fontSize: "0.8125rem",
-              color: "var(--color-warning)",
-              marginBottom: "var(--space-2)",
-              border: "1px solid rgba(224, 160, 48, 0.2)",
-            }}
-          >
-            🎤 {voiceError}
-          </div>
-        )}
+          {/* Voice error toast */}
+          {voiceError && (
+            <div
+              style={{
+                padding: "var(--space-3) var(--space-4)",
+                background: "var(--color-warning-bg)",
+                borderRadius: "var(--radius-md)",
+                fontSize: "0.8125rem",
+                color: "var(--color-warning)",
+                marginBottom: "var(--space-2)",
+                border: "1px solid rgba(224, 160, 48, 0.2)",
+              }}
+            >
+              🎤 {voiceError}
+            </div>
+          )}
 
-        {/* Chat Input */}
-        <div className="chat-input-container">
-          <div className="chat-input-wrapper">
-            {/* Voice Button */}
-            {voiceSupported && (
+          {/* Chat Input */}
+          <div className="chat-input-container">
+            <div className="chat-input-wrapper">
+              {/* Voice Button */}
+              {voiceSupported && (
+                <button
+                  className={`voice-btn ${isListening ? "recording" : ""}`}
+                  onClick={toggleListening}
+                  title={isListening ? "Stop recording" : "Start voice input"}
+                  id="voice-input-btn"
+                  type="button"
+                >
+                  {isListening ? (
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="6" y="6" width="12" height="12" rx="2" />
+                    </svg>
+                  ) : (
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      <line x1="12" x2="12" y1="19" y2="22" />
+                    </svg>
+                  )}
+                </button>
+              )}
+
+              {/* Text Input */}
+              <textarea
+                className="chat-input"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={
+                  isListening
+                    ? "🎤 Listening... speak your command"
+                    : isConnected
+                    ? 'Type "Send 100 USDC to 0x..." or ask anything...'
+                    : "Connect your wallet to start sending USDC..."
+                }
+                rows={1}
+                disabled={isLoading || isListening}
+                id="chat-input"
+                style={{
+                  overflowY: input.split("\n").length > 3 ? "auto" : "hidden",
+                }}
+              />
+
+              {/* Send Button */}
               <button
-                className={`voice-btn ${isListening ? "recording" : ""}`}
-                onClick={toggleListening}
-                title={isListening ? "Stop recording" : "Start voice input"}
-                id="voice-input-btn"
+                className="btn btn-primary btn-icon"
+                onClick={() => handleSend()}
+                disabled={!input.trim() || isLoading}
+                title="Send message"
+                id="send-message-btn"
                 type="button"
               >
-                {isListening ? (
+                {isLoading ? (
+                  <span className="spinner" style={{ borderTopColor: "white" }} />
+                ) : (
                   <svg
                     width="18"
                     height="18"
@@ -300,111 +388,73 @@ export function ChatView() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
-                    <rect x="6" y="6" width="12" height="12" rx="2" />
-                  </svg>
-                ) : (
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    <line x1="12" x2="12" y1="19" y2="22" />
+                    <path d="m5 12 14-7-4 7 4 7Z" />
+                    <path d="M5 12h14" />
                   </svg>
                 )}
               </button>
-            )}
+            </div>
 
-            {/* Text Input */}
-            <textarea
-              className="chat-input"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={
-                isListening
-                  ? "🎤 Listening... speak your command"
-                  : isConnected
-                  ? 'Type "Send 100 USDC to 0x..." or ask anything...'
-                  : "Connect your wallet to start sending USDC..."
-              }
-              rows={1}
-              disabled={isLoading || isListening}
-              id="chat-input"
+            {/* Footer */}
+            <div
               style={{
-                overflowY: input.split("\n").length > 3 ? "auto" : "hidden",
+                textAlign: "center",
+                padding: "var(--space-2) 0",
+                fontSize: "0.6875rem",
+                color: "var(--color-text-tertiary)",
               }}
-            />
-
-            {/* Send Button */}
-            <button
-              className="btn btn-primary btn-icon"
-              onClick={() => handleSend()}
-              disabled={!input.trim() || isLoading}
-              title="Send message"
-              id="send-message-btn"
-              type="button"
             >
-              {isLoading ? (
-                <span className="spinner" style={{ borderTopColor: "white" }} />
-              ) : (
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="m5 12 14-7-4 7 4 7Z" />
-                  <path d="M5 12h14" />
-                </svg>
+              Powered by{" "}
+              <a
+                href="https://www.circle.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "var(--color-accent)", textDecoration: "none" }}
+              >
+                Circle
+              </a>{" "}
+              &{" "}
+              <a
+                href="https://docs.arc.network"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "var(--color-accent)", textDecoration: "none" }}
+              >
+                Arc Network
+              </a>{" "}
+              · USDC on Arc Testnet
+              {isConnected && address && (
+                <span style={{ marginLeft: "var(--space-2)" }}>
+                  · {address.slice(0, 6)}...{address.slice(-4)}
+                </span>
               )}
-            </button>
+            </div>
           </div>
+        </div>
 
-          {/* Footer */}
-          <div
-            style={{
-              textAlign: "center",
-              padding: "var(--space-2) 0",
-              fontSize: "0.6875rem",
-              color: "var(--color-text-tertiary)",
-            }}
-          >
-            Powered by{" "}
-            <a
-              href="https://www.circle.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "var(--color-accent)", textDecoration: "none" }}
-            >
-              Circle
-            </a>{" "}
-            &{" "}
-            <a
-              href="https://docs.arc.network"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "var(--color-accent)", textDecoration: "none" }}
-            >
-              Arc Network
-            </a>{" "}
-            · USDC on Arc Testnet
-            {isConnected && address && (
-              <span style={{ marginLeft: "var(--space-2)" }}>
-                · {address.slice(0, 6)}...{address.slice(-4)}
-              </span>
-            )}
-          </div>
+        {/* Right Side: Nanopayment Channel Card */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+          <ChannelCard
+            channel={nanopay.channel}
+            onOpen={(amount) =>
+              nanopay.openChannel(
+                amount,
+                address || "",
+                circleWallet.walletAddress
+                  ? (to, amt) =>
+                      circleWallet.executeTransfer(
+                        to,
+                        amt,
+                        circleWallet.tokenId || "simulated_usdc_token_id"
+                      )
+                  : undefined
+              )
+            }
+            onClose={() => nanopay.closeChannel(address || "")}
+            isProcessing={nanopay.isLoading}
+            walletAddress={address || undefined}
+            walletBalance={circleWallet.walletAddress ? circleWallet.balance : "25.0"}
+          />
         </div>
       </main>
 

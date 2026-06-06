@@ -9,6 +9,7 @@ import { createViemAdapterFromProvider } from "@circle-fin/adapter-viem-v2";
 import { useCircleWallet } from "@/hooks/useCircleWallet";
 import { useCCTP } from "@/hooks/useCCTP";
 import { useStableFX } from "@/hooks/useStableFX";
+import { useNanopayments } from "@/hooks/useNanopayments";
 import type {
   ChatMessage,
   TransferIntent,
@@ -48,6 +49,7 @@ export function useChat() {
   const circleWallet = useCircleWallet();
   const cctp = useCCTP();
   const fx = useStableFX();
+  const nanopay = useNanopayments();
   const { address: web3Address, isConnected: isWeb3Connected } = useAccount();
   const isConnected = isWeb3Connected || !!circleWallet.walletAddress;
   const address = web3Address || circleWallet.walletAddress;
@@ -100,14 +102,33 @@ export function useChat() {
             content: m.content,
           }));
 
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        
+        // Sign payment token if channel is open
+        if (nanopay.channel?.isOpen) {
+          const token = nanopay.signPaymentToken(0.0005);
+          if (token) {
+            headers["x402-payment-token"] = token;
+          }
+        }
+
         const res = await fetch("/api/parse", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({
             message: userMessage,
             conversationHistory,
           }),
         });
+
+        if (res.status === 402) {
+          addMessage(
+            "ai",
+            "text",
+            "⚠️ Conversational AI queries on Arc Testnet require an active Circle Gateway Nanopayments channel ($0.0005 USDC/msg).\n\nPlease open and fund a channel to continue without wallet signing prompt delays! 👇"
+          );
+          return null;
+        }
 
         if (!res.ok) {
           throw new Error(`Parse API returned ${res.status}`);
@@ -119,7 +140,7 @@ export function useChat() {
         return null;
       }
     },
-    [messages]
+    [messages, nanopay, addMessage]
   );
 
   // Explain error via MCP API
@@ -893,5 +914,6 @@ export function useChat() {
     setShowOnboardModal,
     cctp,
     fx,
+    nanopay,
   };
 }

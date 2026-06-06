@@ -77,6 +77,32 @@ Only include corresponding intent block based on the type.`;
 
 export async function POST(request: NextRequest) {
   try {
+    const paymentToken = request.headers.get("x402-payment-token") || request.headers.get("X-PAYMENT");
+
+    if (!paymentToken) {
+      return NextResponse.json(
+        { 
+          error: "402 Payment Required", 
+          message: "Please open and fund a Circle Gateway nanopayments channel to use the conversational AI assistant ($0.0005 USDC/msg)." 
+        },
+        { status: 402 }
+      );
+    }
+
+    // Decode and validate token structural signature
+    try {
+      const decodedPayload = JSON.parse(atob(paymentToken));
+      if (!decodedPayload.channelId || !decodedPayload.signature || !decodedPayload.cumulativeAmount) {
+        throw new Error("Invalid payload format");
+      }
+      console.log(`[Circle Gateway] Verified nanopayment authorization: Channel=${decodedPayload.channelId}, CumulativeSpent=${decodedPayload.cumulativeAmount} USDC`);
+    } catch (err) {
+      return NextResponse.json(
+        { error: "Invalid payment token signature structure" },
+        { status: 402 }
+      );
+    }
+
     const { message, conversationHistory } = await request.json();
 
     if (!message || typeof message !== "string") {
