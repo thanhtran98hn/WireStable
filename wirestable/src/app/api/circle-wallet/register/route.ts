@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { fetchWithRetry } from "@/utils/apiHelper";
 
 export async function POST(req: Request) {
   try {
@@ -14,26 +15,17 @@ export async function POST(req: Request) {
 
     const circleApiKey = process.env.CIRCLE_API_KEY;
     const appId = process.env.NEXT_PUBLIC_CIRCLE_APP_ID;
+    const circleApiUrl = process.env.CIRCLE_API_URL || "https://api.circle.com";
 
     // Deterministic userId from email
     const userId = crypto.createHash("sha256").update(email).digest("hex").slice(0, 32);
 
     console.log(`[Circle UCW Register] Processing user registration for: ${email} (UserID: ${userId})`);
 
-    // Fallback simulation mode if credentials are missing
     if (!circleApiKey || !appId) {
-      console.warn("[Circle UCW Register] CIRCLE_API_KEY or NEXT_PUBLIC_CIRCLE_APP_ID is missing. Running in Simulation mode.");
-      
-      // Return simulated challenge params for testing
       return NextResponse.json({
-        simulated: true,
-        userId,
-        userToken: "simulated_user_token_" + userId,
-        encryptionKey: "simulated_encryption_key_hash_data_etc",
-        challengeId: crypto.randomUUID(),
-        address: "0x1234567890123456789012345678901234567890", // Mock address
-        message: "Successfully generated simulated registration challenge (Simulation Mode)."
-      });
+        error: "Circle API credentials (CIRCLE_API_KEY or NEXT_PUBLIC_CIRCLE_APP_ID) are not configured."
+      }, { status: 500 });
     }
 
     const headers = {
@@ -43,7 +35,7 @@ export async function POST(req: Request) {
 
     // Step 1: Create user on Circle
     try {
-      const createUserRes = await fetch("https://api.circle.com/v1/w3s/users", {
+      const createUserRes = await fetchWithRetry(`${circleApiUrl}/v1/w3s/users`, {
         method: "POST",
         headers,
         body: JSON.stringify({ userId }),
@@ -55,7 +47,7 @@ export async function POST(req: Request) {
     }
 
     // Step 2: Generate User Session Token
-    const tokenRes = await fetch("https://api.circle.com/v1/w3s/users/token", {
+    const tokenRes = await fetchWithRetry(`${circleApiUrl}/v1/w3s/users/token`, {
       method: "POST",
       headers,
       body: JSON.stringify({ userId }),
@@ -72,7 +64,7 @@ export async function POST(req: Request) {
     const { data: { userToken, encryptionKey } } = await tokenRes.json();
 
     // Step 3: Initialize user's wallet
-    const initRes = await fetch("https://api.circle.com/v1/w3s/user/initialize", {
+    const initRes = await fetchWithRetry(`${circleApiUrl}/v1/w3s/user/initialize`, {
       method: "POST",
       headers: {
         ...headers,

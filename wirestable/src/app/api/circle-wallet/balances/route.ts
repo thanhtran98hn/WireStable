@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fetchWithRetry } from "@/utils/apiHelper";
 
 export async function GET(req: Request) {
   try {
@@ -14,26 +15,12 @@ export async function GET(req: Request) {
     }
 
     const circleApiKey = process.env.CIRCLE_API_KEY;
+    const circleApiUrl = process.env.CIRCLE_API_URL || "https://api.circle.com";
 
-    // Fallback simulation mode
     if (!circleApiKey) {
-      console.warn("[Circle UCW Ballets] CIRCLE_API_KEY is missing. Running in Simulation mode.");
       return NextResponse.json({
-        simulated: true,
-        balances: [
-          {
-            amount: "1500.00",
-            token: {
-              id: "simulated_usdc_token_id",
-              address: "0x0123456789abcdef0123456789abcdef01234567",
-              symbol: "USDC",
-              name: "USD Coin",
-              decimals: 6,
-              blockchain: "ARC-TESTNET"
-            }
-          }
-        ]
-      });
+        error: "Circle API key is not configured."
+      }, { status: 500 });
     }
 
     const headers = {
@@ -42,7 +29,7 @@ export async function GET(req: Request) {
       "X-User-Token": userToken
     };
 
-    const res = await fetch(`https://api.circle.com/v1/w3s/wallets/${walletId}/balances`, {
+    const res = await fetchWithRetry(`${circleApiUrl}/v1/w3s/wallets/${walletId}/balances`, {
       method: "GET",
       headers
     });

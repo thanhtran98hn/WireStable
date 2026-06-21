@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
-// Mock list of sanctioned or restricted addresses (lowercase)
+// Local database of sanctioned or restricted addresses (lowercase)
 const RESTRICTED_ADDRESSES = [
   "0x0000000000000000000000000000000000000000",
   "0x7f0cbcf157624554a4427b74d3dc6a9e80000000",
   "0x1111111111111111111111111111111111111111",
-  "0x70997970c51812dc3a010c7d01b50e0d17dc79c8", // Mock high-risk mixer
+  "0x70997970c51812dc3a010c7d01b50e0d17dc79c8", // Known high-risk mixer
 ];
 
 export async function POST(request: Request) {

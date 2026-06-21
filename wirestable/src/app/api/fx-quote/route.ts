@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fetchWithRetry } from "@/utils/apiHelper";
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,12 +18,13 @@ export async function GET(request: NextRequest) {
     }
 
     const apiKey = process.env.CIRCLE_API_KEY;
+    const circleApiUrl = process.env.CIRCLE_API_URL || "https://api.circle.com";
 
-    // Real StableFX API Call if API Key exists
-    if (apiKey && apiKey !== "simulated") {
+    // 1. Real StableFX API Call if API Key exists
+    if (apiKey && apiKey !== "simulated" && apiKey !== "") {
       try {
-        const url = `https://api.circle.com/v1/stablefx/quotes?sellAsset=${tokenIn}&buyAsset=${tokenOut}&sellAmount=${amountIn}`;
-        const res = await fetch(url, {
+        const url = `${circleApiUrl}/v1/stablefx/quotes?sellAsset=${tokenIn}&buyAsset=${tokenOut}&sellAmount=${amountIn}`;
+        const res = await fetchWithRetry(url, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${apiKey}`,
@@ -32,7 +34,6 @@ export async function GET(request: NextRequest) {
 
         if (res.ok) {
           const data = await res.json();
-          // Normalize API response to include rate, buyAmount, fee, spread, slippage, expiresAt
           const rate = data.rate || data.price || "0.92";
           const buyAmount = data.buyAmount || (numericAmount * parseFloat(rate)).toFixed(6);
           return NextResponse.json({
@@ -54,9 +55,22 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // High fidelity simulation mode (1 USDC = 0.9245 EURC, 1 EURC = 1.0817 USDC)
-    const rate = tokenIn === "USDC" ? 0.9245 : 1.0817;
-    const buyAmount = (numericAmount * rate).toFixed(6);
+    // 2. High-fidelity Live Fallback: Fetch spot rates from Coinbase public API
+    let spotRate = tokenIn === "USDC" ? 0.9245 : 1.0817;
+    try {
+      const cbRes = await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USDC");
+      if (cbRes.ok) {
+        const cbData = await cbRes.json();
+        const usdcToEur = parseFloat(cbData.data?.rates?.EUR);
+        if (usdcToEur && !isNaN(usdcToEur)) {
+          spotRate = tokenIn === "USDC" ? usdcToEur : 1.0 / usdcToEur;
+        }
+      }
+    } catch (err) {
+      console.warn("Coinbase API fallback failed, using last known peg:", err);
+    }
+
+    const buyAmount = (numericAmount * spotRate).toFixed(6);
     const fee = (numericAmount * 0.0015).toFixed(6); // 0.15% fee
     const spread = "0.0005"; // 0.05%
     const slippage = "0.001"; // 0.1% slippage protection
@@ -64,7 +78,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       id: `fxq_${Math.random().toString(36).substring(2, 11)}`,
       pair: `${tokenIn}/${tokenOut}`,
-      rate: rate.toString(),
+      rate: spotRate.toString(),
       sellAmount: amountIn,
       buyAmount,
       fee,

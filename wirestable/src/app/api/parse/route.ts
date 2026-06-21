@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { privateKeyToAccount } from "viem/accounts";
+import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import { keccak256 } from "viem";
+import { rateLimit } from "@/utils/rateLimiter";
+import { logger } from "@/utils/logger";
 
 function getOpenAI() {
   return new OpenAI({
@@ -91,10 +93,27 @@ Your job is to parse user messages and extract their intent. You MUST respond wi
 Only include corresponding intent block based on the type.`;
 
 export async function POST(request: NextRequest) {
+  const limiter = rateLimit(request, 30);
+  if (!limiter.success) {
+    logger.warn({
+      category: "API",
+      event: "RATE_LIMIT_EXCEEDED",
+      message: "Rate limit reached on POST parse API",
+      ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
+    });
+    return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+  }
+
   try {
     const paymentToken = request.headers.get("x402-payment-token") || request.headers.get("X-PAYMENT");
 
     if (!paymentToken) {
+      logger.warn({
+        category: "AUTH",
+        event: "MISSING_PAYMENT_TOKEN",
+        message: "Attempted to access parse API without x402-payment-token header",
+        ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
+      });
       return NextResponse.json(
         { 
           error: "402 Payment Required", 
@@ -110,8 +129,23 @@ export async function POST(request: NextRequest) {
       if (!decodedPayload.channelId || !decodedPayload.signature || !decodedPayload.cumulativeAmount) {
         throw new Error("Invalid payload format");
       }
-      console.log(`[Circle Gateway] Verified nanopayment authorization: Channel=${decodedPayload.channelId}, CumulativeSpent=${decodedPayload.cumulativeAmount} USDC`);
+      logger.info({
+        category: "AUTH",
+        event: "NANOPAYMENT_VERIFIED",
+        message: `Verified nanopayment channel: ${decodedPayload.channelId}`,
+        ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
+        metadata: {
+          channelId: decodedPayload.channelId,
+          cumulativeSpent: decodedPayload.cumulativeAmount,
+        },
+      });
     } catch (err) {
+      logger.warn({
+        category: "AUTH",
+        event: "INVALID_PAYMENT_TOKEN",
+        message: "Attempted to access parse API with malformed payment token",
+        ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
+      });
       return NextResponse.json(
         { error: "Invalid payment token signature structure" },
         { status: 402 }
@@ -281,8 +315,18 @@ export async function POST(request: NextRequest) {
     const transactionalTypes = ["transfer", "swap", "bridge", "stream_create", "stream_withdraw", "escrow_create", "escrow_submit"];
     if (transactionalTypes.includes(parsed.type)) {
       try {
-        const privateKey = (process.env.AGENT_PRIVATE_KEY || "0x8183e5c7075c1c09893d596489b4de5de586616fe78654c60b9f1d071987c532") as `0x${string}`;
-        const account = privateKeyToAccount(privateKey);
+        let keyToUse = process.env.AGENT_PRIVATE_KEY;
+        if (!keyToUse) {
+          logger.warn({
+            category: "SECURITY",
+            event: "MISSING_AGENT_KEY",
+            message: "AGENT_PRIVATE_KEY is missing from environment. Generating transient random key fallback.",
+            ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
+          });
+          keyToUse = generatePrivateKey();
+        }
+        
+        const account = privateKeyToAccount(keyToUse as `0x${string}`);
         
         const payloadData = {
           type: parsed.type,
@@ -294,8 +338,27 @@ export async function POST(request: NextRequest) {
 
         parsed.agentSignature = signature;
         parsed.agentPayloadHash = hash;
+
+        logger.info({
+          category: "SECURITY",
+          event: "PAYLOAD_SIGNED",
+          message: `Successfully generated ERC-8004 signature for ${parsed.type} intent`,
+          ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
+          metadata: {
+            type: parsed.type,
+            hash,
+          },
+        });
       } catch (signErr) {
-        console.error("Agent payload signing failed:", signErr);
+        logger.error({
+          category: "SECURITY",
+          event: "PAYLOAD_SIGNING_FAILED",
+          message: "Agent cryptographic signature generation failed",
+          ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
+          metadata: {
+            error: signErr instanceof Error ? signErr.message : String(signErr),
+          },
+        });
       }
     }
 

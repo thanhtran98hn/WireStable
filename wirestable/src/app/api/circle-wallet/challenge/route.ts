@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { fetchWithRetry } from "@/utils/apiHelper";
 
 export async function POST(req: Request) {
   try {
@@ -13,17 +14,14 @@ export async function POST(req: Request) {
     }
 
     const circleApiKey = process.env.CIRCLE_API_KEY;
+    const circleApiUrl = process.env.CIRCLE_API_URL || "https://api.circle.com";
 
     console.log(`[Circle UCW Challenge] Initiating transfer challenge: Wallet ${walletId} -> ${destinationAddress} (Amount: ${amount})`);
 
-    // Fallback simulation mode if credentials are missing
     if (!circleApiKey) {
-      console.warn("[Circle UCW Challenge] CIRCLE_API_KEY is missing. Running in Simulation mode.");
       return NextResponse.json({
-        simulated: true,
-        challengeId: crypto.randomUUID(),
-        message: "Successfully generated simulated transfer challenge (Simulation Mode)."
-      });
+        error: "Circle API key is not configured."
+      }, { status: 500 });
     }
 
     const headers = {
@@ -41,7 +39,7 @@ export async function POST(req: Request) {
       feeLevel: "MEDIUM"
     };
 
-    const res = await fetch("https://api.circle.com/v1/w3s/user/transactions/transfer", {
+    const res = await fetchWithRetry(`${circleApiUrl}/v1/w3s/user/transactions/transfer`, {
       method: "POST",
       headers,
       body: JSON.stringify(payload)

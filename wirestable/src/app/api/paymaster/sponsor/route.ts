@@ -61,27 +61,19 @@ export async function POST(request: Request) {
       transport: http()
     });
 
-    let txHash = "";
-
     // Execute sponsored transfer on-chain using the Paymaster/Sponsor balance
     // This allows the user to pay 0 gas and sponsors the entire USDC transaction.
-    try {
-      const parsedAmount = BigInt(Math.floor(parseFloat(amount) * 1_000_000));
-      
-      const { request: txRequest } = await publicClient.simulateContract({
-        address: USDC_ARC_ADDRESS,
-        abi: erc20Abi,
-        functionName: "transfer",
-        args: [recipient as `0x${string}`, parsedAmount],
-        account: sponsorAccount
-      });
+    const parsedAmount = BigInt(Math.floor(parseFloat(amount) * 1_000_000));
+    
+    const { request: txRequest } = await publicClient.simulateContract({
+      address: USDC_ARC_ADDRESS,
+      abi: erc20Abi,
+      functionName: "transfer",
+      args: [recipient as `0x${string}`, parsedAmount],
+      account: sponsorAccount
+    });
 
-      txHash = await walletClient.writeContract(txRequest);
-    } catch (contractErr: any) {
-      console.warn("On-chain contract execution failed, generating simulated transaction hash:", contractErr);
-      // Fallback to a valid simulated transaction hash in case of contract or sandbox funding limits
-      txHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
-    }
+    const txHash = await walletClient.writeContract(txRequest);
 
     return NextResponse.json({
       success: true,
