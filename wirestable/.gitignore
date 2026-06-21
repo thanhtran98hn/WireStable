@@ -32,6 +32,7 @@
 *.pem
 *.key
 secrets.json
+corporate_wallet.json
 
 # Explicitly allow committing .env.example
 !.env.example
