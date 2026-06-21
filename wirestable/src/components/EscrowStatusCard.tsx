@@ -100,7 +100,7 @@ export function EscrowStatusCard({
         <div>
           <span
             style={{
-              background: "rgba(255,255,255,0.05)",
+              background: "var(--color-bg-secondary)",
               color: currentConfig.text,
               fontSize: "10px",
               fontWeight: 700,
@@ -119,26 +119,26 @@ export function EscrowStatusCard({
         </div>
         <div style={{ textAlign: "right" }}>
           <span style={{ fontSize: "0.625rem", color: "var(--color-text-tertiary)", textTransform: "uppercase" }}>Locked Vault</span>
-          <div style={{ fontSize: "1.125rem", fontWeight: 800, color: "var(--color-primary)" }}>
+          <div style={{ fontSize: "1.125rem", fontWeight: 800, color: "var(--color-text-primary)" }}>
             {amount} USDC
           </div>
         </div>
       </div>
 
       {/* Labor State Stepper */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "var(--space-4) 0", padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "var(--space-4) 0", padding: "8px 0", borderTop: "1px solid var(--color-border)", borderBottom: "1px solid var(--color-border)" }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", opacity: status !== "REJECTED" ? 1 : 0.4 }}>
           <span style={{ width: "18px", height: "18px", borderRadius: "50%", background: "#f59e0b", color: "#000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "bold" }}>1</span>
           <span style={{ fontSize: "10px", color: "var(--color-text-secondary)", marginTop: "4px" }}>Funded</span>
         </div>
-        <div style={{ flex: 1, height: "2px", background: status !== "FUNDED" && status !== "REJECTED" ? "#3b82f6" : "rgba(255,255,255,0.1)", margin: "0 8px", marginTop: "-12px" }} />
+        <div style={{ flex: 1, height: "2px", background: status !== "FUNDED" && status !== "REJECTED" ? "#3b82f6" : "var(--color-border)", margin: "0 8px", marginTop: "-12px" }} />
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", opacity: status !== "FUNDED" && status !== "REJECTED" ? 1 : 0.4 }}>
-          <span style={{ width: "18px", height: "18px", borderRadius: "50%", background: status === "SUBMITTED" || status === "COMPLETED" ? "#3b82f6" : "rgba(255,255,255,0.1)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "bold" }}>2</span>
+          <span style={{ width: "18px", height: "18px", borderRadius: "50%", background: status === "SUBMITTED" || status === "COMPLETED" ? "#3b82f6" : "var(--color-bg-secondary)", color: status === "SUBMITTED" || status === "COMPLETED" ? "#fff" : "var(--color-text-secondary)", border: "1px solid var(--color-border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "bold" }}>2</span>
           <span style={{ fontSize: "10px", color: "var(--color-text-secondary)", marginTop: "4px" }}>Submitted</span>
         </div>
-        <div style={{ flex: 1, height: "2px", background: status === "COMPLETED" ? "#10b981" : "rgba(255,255,255,0.1)", margin: "0 8px", marginTop: "-12px" }} />
+        <div style={{ flex: 1, height: "2px", background: status === "COMPLETED" ? "#10b981" : "var(--color-border)", margin: "0 8px", marginTop: "-12px" }} />
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", opacity: status === "COMPLETED" ? 1 : 0.4 }}>
-          <span style={{ width: "18px", height: "18px", borderRadius: "50%", background: status === "COMPLETED" ? "#10b981" : "rgba(255,255,255,0.1)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "bold" }}>3</span>
+          <span style={{ width: "18px", height: "18px", borderRadius: "50%", background: status === "COMPLETED" ? "#10b981" : "var(--color-bg-secondary)", color: status === "COMPLETED" ? "#fff" : "var(--color-text-secondary)", border: "1px solid var(--color-border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "bold" }}>3</span>
           <span style={{ fontSize: "10px", color: "var(--color-text-secondary)", marginTop: "4px" }}>Settled</span>
         </div>
       </div>
@@ -162,13 +162,13 @@ export function EscrowStatusCard({
           <span className="text-mono" title={deliverableHash}>{deliverableHash.slice(0, 14)}...</span>
         </div>
         {deliverableUrl && (
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px", padding: "6px 8px", background: "rgba(0,0,0,0.15)", borderRadius: "var(--radius-sm)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px", padding: "6px 8px", background: "var(--color-bg-secondary)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)" }}>
             <span>Submission Link:</span>
             <a
               href={deliverableUrl}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: "var(--color-primary)", textDecoration: "underline" }}
+              style={{ color: "var(--color-accent)", textDecoration: "underline", fontWeight: 700 }}
             >
               {deliverableUrl.replace("https://", "").slice(0, 24)}...
             </a>
@@ -182,7 +182,7 @@ export function EscrowStatusCard({
           {isProvider ? (
             <form onSubmit={handleUrlSubmit} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <div>
-                <label style={{ fontSize: "0.6875rem", color: "var(--color-text-secondary)", display: "block", marginBottom: "4px" }}>
+                <label style={{ fontSize: "0.6875rem", color: "var(--color-text-secondary)", display: "block", marginBottom: "4px", fontWeight: 600 }}>
                   SUBMIT DELIVERABLE LINK (GitHub, Figma, Vercel, or Google Drive)
                 </label>
                 <input
@@ -195,15 +195,16 @@ export function EscrowStatusCard({
                     width: "100%",
                     padding: "8px 12px",
                     background: "var(--color-bg-secondary)",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                    border: "1px solid var(--color-border)",
                     borderRadius: "var(--radius-sm)",
-                    color: "#fff",
-                    fontSize: "0.8125rem"
+                    color: "var(--color-text-primary)",
+                    fontSize: "0.8125rem",
+                    fontWeight: 600
                   }}
                 />
               </div>
 
-              {error && <div style={{ fontSize: "0.75rem", color: "#ef4444" }}>{error}</div>}
+              {error && <div style={{ fontSize: "0.75rem", color: "var(--color-error)", fontWeight: 600 }}>{error}</div>}
 
               <button
                 type="submit"

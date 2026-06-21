@@ -82,45 +82,45 @@ export function BridgeProgressCard({
   };
 
   return (
-    <div className="w-full rounded-3xl border border-slate-800 bg-slate-950/80 p-6 shadow-xl backdrop-blur-md">
+    <div className="w-full rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xl">
       {/* Card Header */}
-      <div className="flex items-center justify-between border-b border-slate-900 pb-4 mb-4">
+      <div className="flex items-center justify-between border-b border-[var(--color-border-light)] pb-4 mb-4">
         <div>
-          <span className="bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">
+          <span className="bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">
             Circle CCTP Bridge
           </span>
-          <h4 className="text-sm font-bold text-white mt-1">
+          <h4 className="text-sm font-extrabold text-[var(--color-text-primary)] mt-1 font-round">
             Bridging {amount} USDC from {sourceChain} to Arc
           </h4>
         </div>
         {step === "success" && (
-          <span className="text-emerald-400 text-xs font-semibold flex items-center gap-1">
+          <span className="text-[var(--color-success)] text-xs font-semibold flex items-center gap-1">
             ✓ Complete
           </span>
         )}
         {step === "failed" && (
-          <span className="text-rose-500 text-xs font-semibold flex items-center gap-1">
+          <span className="text-[var(--color-error)] text-xs font-semibold flex items-center gap-1">
             ⚠️ Failed
           </span>
         )}
         {!["success", "failed", "idle"].includes(step) && (
-          <span className="text-blue-400 text-xs font-semibold flex items-center gap-1.5 animate-pulse">
-            <span className="h-2 w-2 rounded-full bg-blue-400 animate-ping" />
+          <span className="text-[var(--color-text-secondary)] text-xs font-semibold flex items-center gap-1.5 animate-pulse">
+            <span className="h-2 w-2 rounded-full bg-[var(--color-accent)] animate-ping" />
             In Progress
           </span>
         )}
       </div>
 
       {/* Destination Recipient Info */}
-      <div className="bg-slate-900/50 rounded-2xl p-3 mb-6 flex flex-col gap-1 text-[11px] text-slate-400">
+      <div className="bg-[var(--color-bg-secondary)] rounded-2xl p-3 mb-6 flex flex-col gap-1 text-[11px] text-[var(--color-text-secondary)] border border-[var(--color-border-light)]">
         <div className="flex justify-between">
           <span>Recipient Address (Arc):</span>
-          <span className="font-mono text-slate-200">{toAddress.slice(0, 8)}...{toAddress.slice(-6)}</span>
+          <span className="font-mono text-[var(--color-text-primary)] font-bold">{toAddress.slice(0, 8)}...{toAddress.slice(-6)}</span>
         </div>
       </div>
 
       {/* Stepper Content */}
-      <div className="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-800">
+      <div className="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-[var(--color-border)]">
         {stepsList.map((item, idx) => {
           const status = getStepStatus(item);
           return (
@@ -129,12 +129,12 @@ export function BridgeProgressCard({
               <div
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold transition-all duration-300 ${
                   status === "done"
-                    ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
+                    ? "border-[var(--color-success)] bg-[var(--color-success-bg)] text-[var(--color-success)]"
                     : status === "active"
-                    ? "border-blue-500 bg-blue-500/10 text-blue-400 animate-pulse"
+                    ? "border-[var(--color-accent)] bg-[var(--color-accent-bg)] text-[var(--color-accent)] animate-pulse"
                     : status === "error"
-                    ? "border-rose-500 bg-rose-500/10 text-rose-500"
-                    : "border-slate-800 bg-slate-950 text-slate-500"
+                    ? "border-[var(--color-error)] bg-[var(--color-error-bg)] text-[var(--color-error)]"
+                    : "border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-tertiary)]"
                 }`}
               >
                 {status === "done" ? (
@@ -156,12 +156,12 @@ export function BridgeProgressCard({
                 <span
                   className={`text-xs font-semibold ${
                     status === "done"
-                      ? "text-slate-300"
+                      ? "text-[var(--color-text-secondary)]"
                       : status === "active"
-                      ? "text-white"
+                      ? "text-[var(--color-text-primary)] font-bold"
                       : status === "error"
-                      ? "text-rose-500"
-                      : "text-slate-500"
+                      ? "text-[var(--color-error)] font-bold"
+                      : "text-[var(--color-text-tertiary)]"
                   }`}
                 >
                   {item.label}
@@ -169,7 +169,7 @@ export function BridgeProgressCard({
 
                 {/* Info elements */}
                 {item.info && status === "active" && (
-                  <span className="text-[10px] text-blue-400 font-mono mt-1">
+                  <span className="text-[10px] text-[var(--color-text-secondary)] font-mono mt-1">
                     {item.info}
                   </span>
                 )}
@@ -180,7 +180,7 @@ export function BridgeProgressCard({
                     href={`${item.explorer}${item.hash}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[10px] text-blue-500 hover:underline font-mono mt-1 flex items-center gap-1 cursor-pointer"
+                    className="text-[10px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:underline font-mono mt-1 flex items-center gap-1 cursor-pointer"
                   >
                     Tx: {item.hash.slice(0, 10)}...{item.hash.slice(-8)}
                     <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -196,7 +196,7 @@ export function BridgeProgressCard({
 
       {/* Error Output block */}
       {error && (
-        <div className="mt-4 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-[11px] text-rose-400 font-medium leading-relaxed">
+        <div className="mt-4 p-3 rounded-2xl bg-[var(--color-error-bg)] border border-[var(--color-error)]/20 text-[11px] text-[var(--color-error)] font-medium leading-relaxed">
           <span className="font-bold">Error:</span> {error}
         </div>
       )}
@@ -205,7 +205,7 @@ export function BridgeProgressCard({
       {step === "success" && onClose && (
         <button
           onClick={onClose}
-          className="mt-6 w-full rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 text-xs shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
+          className="mt-6 w-full rounded-2xl bg-[var(--color-accent)] hover:bg-[var(--color-accent-light)] text-[var(--color-text-inverse)] font-bold py-3 text-xs shadow-lg shadow-[var(--color-accent)]/15 transition-all cursor-pointer"
           type="button"
         >
           Return to Conversation

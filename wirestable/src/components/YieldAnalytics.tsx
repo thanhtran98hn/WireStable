@@ -34,14 +34,9 @@ export function YieldAnalytics({
   const parsedYield = parseFloat(accruedYield);
   const isHolding = parsedUsyc > 0;
 
-  // Custom SVG coordinates for yield tracking
-  const linePoints = isHolding 
-    ? "0,65 20,58 40,52 60,45 80,32 100,18 120,5"
-    : "0,65 20,65 40,65 60,65 80,65 100,65 120,65";
-
-  const areaPoints = isHolding
-    ? "0,65 20,58 40,52 60,45 80,32 100,18 120,5 120,75 0,75"
-    : "0,65 20,65 40,65 60,65 80,65 100,65 120,65 120,75 0,75";
+  // Custom SVG coordinates for yield tracking (projected target or actual yield curve)
+  const linePoints = "0,65 20,58 40,52 60,45 80,32 100,18 120,5";
+  const areaPoints = "0,65 20,58 40,52 60,45 80,32 100,18 120,5 120,75 0,75";
 
   return (
     <div className="card" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", padding: "24px", minHeight: "340px" }}>
@@ -137,14 +132,15 @@ export function YieldAnalytics({
                 </linearGradient>
               </defs>
               {/* Fill Area under Curve */}
-              <polygon points={areaPoints} fill="url(#yieldGrad)" style={{ transition: "points 0.5s ease" }} />
+              <polygon points={areaPoints} fill="url(#yieldGrad)" style={{ transition: "points 0.5s ease", opacity: isHolding ? 1 : 0.2 }} />
               {/* Line Stroke */}
               <polyline
                 fill="none"
                 stroke="#34d399"
                 strokeWidth="2"
                 points={linePoints}
-                style={{ transition: "points 0.5s ease" }}
+                strokeDasharray={isHolding ? undefined : "3 3"}
+                style={{ transition: "points 0.5s ease", opacity: isHolding ? 1 : 0.4 }}
               />
             </svg>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.625rem", color: "var(--color-text-tertiary)", marginTop: "6px" }}>

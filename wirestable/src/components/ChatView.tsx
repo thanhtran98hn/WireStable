@@ -10,7 +10,8 @@ import { ConfirmationCard } from "@/components/ConfirmationCard";
 import { TxTracker } from "@/components/TxTracker";
 import { ErrorExplainer } from "@/components/ErrorExplainer";
 import { EmptyState } from "@/components/EmptyState";
-import { CirclePinModal } from "@/components/CirclePinModal";
+import { useModal } from "@/hooks/useModal";
+
 import { BridgeProgressCard } from "@/components/BridgeProgressCard";
 import { StreamCounter } from "@/components/StreamCounter";
 import { ChannelCard } from "@/components/ChannelCard";
@@ -21,8 +22,11 @@ import { UnifiedPortfolioCard } from "@/components/UnifiedPortfolioCard";
 import { CommandPalette } from "@/components/CommandPalette";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { HedgingLockCard } from "@/components/HedgingLockCard";
+import { Navbar } from "@/components/Navbar";
+import { NetworkActivityFeed } from "@/components/NetworkActivityFeed";
 
 export function ChatView() {
+  const { openModal } = useModal();
   const [input, setInput] = useState("");
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const { isConnected: isWeb3Connected, address: web3Address } = useAccount();
@@ -58,14 +62,6 @@ export function ChatView() {
 
   const [email, setEmail] = useState("");
   const [onboardError, setOnboardError] = useState<string | null>(null);
-  const [isLargeScreen, setIsLargeScreen] = useState(true);
-
-  useEffect(() => {
-    const checkSize = () => setIsLargeScreen(window.innerWidth > 960);
-    checkSize();
-    window.addEventListener("resize", checkSize);
-    return () => window.removeEventListener("resize", checkSize);
-  }, []);
 
   const isConnected = isWeb3Connected || !!circleWallet.walletAddress;
   const address = web3Address || circleWallet.walletAddress;
@@ -136,75 +132,65 @@ export function ChatView() {
   return (
     <div className="app-container">
       {/* Header */}
-      <header className="app-header">
-        <div className="app-header-inner">
-          <div className="app-logo">
-            <div className="app-logo-icon">W$</div>
-            <div className="app-logo-text">
-              Wire<span>Stable</span>
-            </div>
+      <Navbar>
+        <a href="/agent-studio" className="btn btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none", fontSize: "11px", fontWeight: "bold", padding: "6px 12px", borderRadius: "8px" }}>
+          ⚡ Agent Studio
+        </a>
+        <a href="/admin" className="btn btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none", fontSize: "11px", fontWeight: "bold", padding: "6px 12px", borderRadius: "8px" }}>
+          🏢 Enterprise Admin
+        </a>
+        <AgentIdentityBadge />
+        {isConnected && (
+          <div className="network-badge">
+            <span className="network-dot" />
+            Arc Testnet
           </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-            <a href="/admin" className="btn btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none", fontSize: "11px", fontWeight: "bold", padding: "6px 12px", borderRadius: "8px" }}>
-              🏢 Enterprise Admin
-            </a>
-            <AgentIdentityBadge />
-            {isConnected && (
-              <div className="network-badge">
-                <span className="network-dot" />
-                Arc Testnet
-              </div>
+        )}
+        
+        {circleWallet.walletAddress ? (
+          <div className="flex flex-wrap items-center gap-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl sm:rounded-full px-3 py-1.5 text-xs text-[var(--color-text-primary)]">
+            <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse"></span>
+            <span className="font-semibold text-[11px] text-[var(--color-text-secondary)]">Circle:</span>
+            <span className="font-mono text-[11px] text-[var(--color-text-primary)] font-bold">{circleWallet.walletAddress.slice(0, 6)}...{circleWallet.walletAddress.slice(-4)}</span>
+            {circleWallet.balance !== null && (
+              <span className="bg-[var(--color-accent)] text-[var(--color-text-inverse)] px-1.5 py-0.5 rounded-md font-semibold text-[10px]">
+                {parseFloat(circleWallet.balance).toFixed(2)} USDC
+              </span>
             )}
-            
-            {circleWallet.walletAddress ? (
-              <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-full px-3 py-1.5 text-xs text-slate-200">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="font-medium text-[11px] text-slate-400">Circle Wallet:</span>
-                <span className="font-mono text-[11px] text-slate-200">{circleWallet.walletAddress.slice(0, 6)}...{circleWallet.walletAddress.slice(-4)}</span>
-                {circleWallet.balance !== null && (
-                  <span className="bg-blue-500/15 text-blue-400 px-1.5 py-0.5 rounded-md font-semibold text-[10px]">
-                    {parseFloat(circleWallet.balance).toFixed(2)} USDC
-                  </span>
-                )}
-                <button
-                  onClick={circleWallet.disconnect}
-                  className="text-slate-400 hover:text-white transition-colors cursor-pointer ml-1 font-bold"
-                  title="Disconnect"
-                  type="button"
-                >
-                  ✕
-                </button>
-              </div>
-            ) : (
-              <>
-                <ConnectButton
-                  accountStatus="avatar"
-                  chainStatus="icon"
-                  showBalance={true}
-                />
-                {!isWeb3Connected && (
-                  <button
-                    onClick={() => setShowOnboardModal(true)}
-                    className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 active:scale-95 transition-all shadow-md shadow-blue-500/20"
-                    type="button"
-                  >
-                    📧 Email Login
-                  </button>
-                )}
-              </>
+            <button
+              onClick={circleWallet.disconnect}
+              className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer ml-1 font-bold"
+              title="Disconnect"
+              type="button"
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-stretch sm:items-center">
+            <ConnectButton
+              accountStatus="avatar"
+              chainStatus="icon"
+              showBalance={true}
+            />
+            {!isWeb3Connected && (
+              <button
+                onClick={() => setShowOnboardModal(true)}
+                className="flex items-center justify-center gap-2 rounded-xl bg-[var(--color-accent)] px-4 py-2 text-xs font-bold text-[var(--color-text-inverse)] hover:bg-[var(--color-accent-light)] active:scale-95 transition-all shadow-md shadow-[var(--color-accent)]/15"
+                type="button"
+              >
+                📧 Email Login
+              </button>
             )}
           </div>
-        </div>
-      </header>
+        )}
+      </Navbar>
 
       {/* Main Chat Area with Nanopayments Sidebar */}
       <main
-        className="app-main"
+        className="app-main chat-workspace-grid"
         style={{
           maxWidth: "1200px",
-          display: "grid",
-          gridTemplateColumns: isLargeScreen ? "1fr 340px" : "1fr",
           gap: "var(--space-6)",
           padding: "var(--space-4) var(--space-6)",
           width: "100%",
@@ -539,16 +525,36 @@ export function ChatView() {
                   </span>
                 )}
               </div>
+              <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "4px", opacity: 0.85 }}>
+                <a href="/docs" style={{ color: "inherit", textDecoration: "none" }} className="hover:text-[var(--color-accent)]">Docs 📖</a>
+                <span>·</span>
+                <a href="/faq" style={{ color: "inherit", textDecoration: "none" }} className="hover:text-[var(--color-accent)]">FAQ ❓</a>
+                <span>·</span>
+                <a href="/about" style={{ color: "inherit", textDecoration: "none" }} className="hover:text-[var(--color-accent)]">About 🏢</a>
+                <span>·</span>
+                <a href="/privacy" style={{ color: "inherit", textDecoration: "none" }} className="hover:text-[var(--color-accent)]">Privacy 🔒</a>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Right Side: Nanopayment Channel Card */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+        {/* Right Side: Nanopayment Channel Card & Network Feed */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)", width: "320px", flexShrink: 0 }}>
           <ChannelCard
             channel={nanopay.channel}
-            onOpen={(amount) =>
-              nanopay.openChannel(
+            onOpen={(amount, isSandbox) => {
+              if (!isSandbox && circleWallet.walletAddress && !circleWallet.tokenId) {
+                openModal("warning", {
+                  title: "Wallet Sync Acknowledgment",
+                  riskText: "Your Circle User-Controlled Smart Wallet balance is currently syncing with the Arc network indexer.",
+                  impactText: "Opening a payment channel requires identifying token IDs on-chain to handle secure locking.",
+                  consequenceText: "If you proceed before synchronization is complete, the channel allocation could fail or result in locked funds.",
+                  acknowledgeLabel: "I Will Wait",
+                  onAcknowledge: () => {}
+                }, { priority: "P1", preventDuplicate: true });
+                return Promise.resolve(null);
+              }
+              return nanopay.openChannel(
                 amount,
                 address || "",
                 circleWallet.walletAddress
@@ -556,45 +562,33 @@ export function ChatView() {
                       circleWallet.executeTransfer(
                         to,
                         amt,
-                        circleWallet.tokenId || "simulated_usdc_token_id"
+                        circleWallet.tokenId!
                       )
-                  : undefined
-              )
-            }
+                  : undefined,
+                isSandbox
+              );
+            }}
             onClose={() => nanopay.closeChannel(address || "")}
             isProcessing={nanopay.isLoading}
             walletAddress={address || undefined}
             walletBalance={circleWallet.walletAddress ? circleWallet.balance : "25.0"}
           />
+
+          <NetworkActivityFeed />
         </div>
       </main>
 
-      {/* Circle UCW PIN Modal */}
-      <CirclePinModal
-        isOpen={circleWallet.simulatedChallengeActive}
-        type={circleWallet.pendingSimulatedChallenge?.type || null}
-        onConfirm={(pin) => {
-          if (circleWallet.pendingSimulatedChallenge) {
-            circleWallet.pendingSimulatedChallenge.callback(true);
-          }
-        }}
-        onCancel={() => {
-          if (circleWallet.pendingSimulatedChallenge) {
-            circleWallet.pendingSimulatedChallenge.callback(false);
-          }
-        }}
-      />
 
       {/* Web2 Onboarding Modal */}
       {showOnboardModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/90 p-8 shadow-2xl backdrop-blur-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-text-primary)]/40 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 shadow-2xl backdrop-blur-xl">
             {/* Decorative bg */}
-            <div className="absolute -top-10 -left-10 h-32 w-32 rounded-full bg-blue-500/10 blur-2xl"></div>
-            <div className="absolute -bottom-10 -right-10 h-32 w-32 rounded-full bg-indigo-500/10 blur-2xl"></div>
+            <div className="absolute -top-10 -left-10 h-32 w-32 rounded-full bg-[var(--color-bg-secondary)] blur-2xl"></div>
+            <div className="absolute -bottom-10 -right-10 h-32 w-32 rounded-full bg-[var(--color-bg-tertiary)] blur-2xl"></div>
 
             <div className="relative z-10 text-center mb-6">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]">
                 <svg
                   className="h-6 w-6"
                   fill="none"
@@ -610,15 +604,15 @@ export function ChatView() {
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-white">Sign In with Email</h3>
-              <p className="mt-2 text-sm text-slate-400">
+              <h3 className="text-xl font-extrabold text-[var(--color-text-primary)] font-round">Sign In with Email</h3>
+              <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
                 Create or access your conversational global remittance wallet on Arc Testnet via Circle.
               </p>
             </div>
 
             <form onSubmit={handleOnboardSubmit} className="relative z-10 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
                   Email Address
                 </label>
                 <input
@@ -627,27 +621,27 @@ export function ChatView() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="e.g. user@domain.com"
                   required
-                  className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3.5 text-sm text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+                  className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-4 py-3.5 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] focus:border-[var(--color-border-focus)] focus:outline-none focus:ring-1 focus:ring-[var(--color-border-focus)] transition-all font-semibold"
                   disabled={circleWallet.isLoading}
                 />
               </div>
 
               {onboardError && (
-                <p className="text-xs text-rose-500 font-semibold">{onboardError}</p>
+                <p className="text-xs text-[var(--color-error)] font-semibold">{onboardError}</p>
               )}
 
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowOnboardModal(false)}
-                  className="w-1/3 rounded-2xl border border-slate-800 py-3.5 text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800 active:scale-95 transition-all"
+                  className="w-1/3 rounded-2xl border border-[var(--color-border)] py-3.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)] active:scale-95 transition-all"
                   disabled={circleWallet.isLoading}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="w-2/3 rounded-2xl bg-blue-600 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-500 disabled:opacity-50 active:scale-95 transition-all"
+                  className="w-2/3 rounded-2xl bg-[var(--color-accent)] py-3.5 text-center text-sm font-bold text-[var(--color-text-inverse)] shadow-lg shadow-[var(--color-accent)]/15 hover:bg-[var(--color-accent-light)] disabled:opacity-50 active:scale-95 transition-all"
                   disabled={circleWallet.isLoading}
                 >
                   {circleWallet.isLoading ? (

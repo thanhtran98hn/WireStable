@@ -136,8 +136,7 @@ export function useCCTP() {
   const executeBridge = useCallback(async (
     amount: string,
     sourceChainName: string,
-    recipientAddress: string,
-    isSimulated: boolean = true
+    recipientAddress: string
   ) => {
     const source = CCTP_NETWORKS[sourceChainName];
     const destination = CCTP_NETWORKS["Arc_Testnet"];
@@ -145,55 +144,6 @@ export function useCCTP() {
     if (!source) {
       setState(prev => ({ ...prev, step: "failed", error: `Invalid source network: ${sourceChainName}` }));
       return false;
-    }
-
-    if (isSimulated) {
-      // Step-by-step UI simulation
-      try {
-        setState(prev => ({ ...prev, step: "switching-origin", error: null }));
-        await new Promise(r => setTimeout(r, 1500));
-
-        setState(prev => ({ ...prev, step: "approving" }));
-        await new Promise(r => setTimeout(r, 1800));
-
-        const simulatedBurnHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
-        const simulatedMsgHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
-
-        setState(prev => ({
-          ...prev,
-          step: "burning",
-          burnHash: simulatedBurnHash,
-          messageHash: simulatedMsgHash
-        }));
-        await new Promise(r => setTimeout(r, 2000));
-
-        setState(prev => ({ ...prev, step: "polling-attestation" }));
-        // Simulated attestation polling loops
-        await new Promise(r => setTimeout(r, 2500));
-
-        const simulatedAttestation = `0x${Array.from({ length: 130 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
-        setState(prev => ({
-          ...prev,
-          attestationSignature: simulatedAttestation
-        }));
-
-        setState(prev => ({ ...prev, step: "switching-destination" }));
-        await new Promise(r => setTimeout(r, 1500));
-
-        setState(prev => ({ ...prev, step: "minting" }));
-        await new Promise(r => setTimeout(r, 2000));
-
-        const simulatedMintHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
-        setState(prev => ({
-          ...prev,
-          step: "success",
-          mintHash: simulatedMintHash
-        }));
-        return true;
-      } catch (err: any) {
-        setState(prev => ({ ...prev, step: "failed", error: err.message }));
-        return false;
-      }
     }
 
     // REAL WEB3 CCTP EXECUTION PATH

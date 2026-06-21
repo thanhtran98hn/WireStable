@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { privateKeyToAccount } from "viem/accounts";
 
 export interface NanopayChannel {
   channelId: string;
@@ -42,7 +43,7 @@ export function useNanopayments() {
   };
 
   const openChannel = useCallback(
-    async (amount: string, address: string, executeTransferFn?: (to: string, amount: string) => Promise<any>) => {
+    async (amount: string, address: string, executeTransferFn?: (to: string, amount: string) => Promise<any>, isSandbox = false) => {
       setIsLoading(true);
       setError(null);
       try {
@@ -52,7 +53,8 @@ export function useNanopayments() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             initialDeposit: amount,
-            clientAddress: address,
+            clientAddress: address || "0x0000000000000000000000000000000000000000",
+            isSandbox,
           }),
         });
 
@@ -63,12 +65,12 @@ export function useNanopayments() {
         const data = await res.json();
 
         // 2. Fund channel with transaction
-        if (executeTransferFn) {
+        if (!isSandbox) {
+          if (!executeTransferFn) {
+            throw new Error("Funding wallet function is not active. Please connect your wallet to fund the payment channel.");
+          }
           // Send on-chain USDC to Circle Gateway deposit address
           await executeTransferFn(data.depositAddress, amount);
-        } else {
-          // Simulated delay for demo
-          await new Promise((resolve) => setTimeout(resolve, 2000));
         }
 
         // 3. Save active channel state
@@ -96,7 +98,7 @@ export function useNanopayments() {
   );
 
   const signPaymentToken = useCallback(
-    (chargeAmount: number): string | null => {
+    async (chargeAmount: number): Promise<string | null> => {
       if (!channel || !channel.isOpen) return null;
 
       const newCumulative = channel.cumulativeSpent + chargeAmount;
@@ -112,14 +114,19 @@ export function useNanopayments() {
 
       // Generate the base64-encoded x402-payment-token containing signed channel state updates
       const nonce = Date.now();
-      const payload = {
-        channelId: channel.channelId,
-        cumulativeAmount: newCumulative.toFixed(6),
-        nonce,
-        signature: `sig_${Math.random().toString(36).substring(2, 15)}_${channel.clientPublicKey.slice(0, 10)}`,
-      };
+      const message = `${channel.channelId}:${newCumulative.toFixed(6)}:${nonce}`;
 
       try {
+        const account = privateKeyToAccount(channel.clientPrivateKey as `0x${string}`);
+        const signature = await account.signMessage({ message });
+
+        const payload = {
+          channelId: channel.channelId,
+          cumulativeAmount: newCumulative.toFixed(6),
+          nonce,
+          signature,
+        };
+
         return btoa(JSON.stringify(payload));
       } catch (err) {
         console.error("Failed to sign payment token:", err);
@@ -136,9 +143,25 @@ export function useNanopayments() {
       setError(null);
       try {
         const nonce = Date.now();
-        const signature = `sig_close_${Math.random().toString(36).substring(2, 15)}_${channel.clientPublicKey.slice(0, 10)}`;
+        const account = privateKeyToAccount(channel.clientPrivateKey as `0x${string}`);
+        const message = `close:${channel.channelId}:${channel.cumulativeSpent.toFixed(6)}:${nonce}`;
+        const signature = await account.signMessage({ message });
 
         const res = await fetch("/api/nanopay/channel", {
+          method: "POST", // Use POST for routing action or route properly
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "close",
+            channelId: channel.channelId,
+            finalCumulativeAmount: channel.cumulativeSpent.toFixed(6),
+            signature,
+            nonce,
+            recipientAddress: address,
+          }),
+        });
+
+        // Try PUT as fallback since PUT was defined originally, let's keep fetch via PUT method
+        const putRes = await fetch("/api/nanopay/channel", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -146,15 +169,16 @@ export function useNanopayments() {
             channelId: channel.channelId,
             finalCumulativeAmount: channel.cumulativeSpent.toFixed(6),
             signature,
+            nonce,
             recipientAddress: address,
           }),
         });
 
-        if (!res.ok) {
+        if (!putRes.ok) {
           throw new Error("Failed to settle channel with Gateway");
         }
 
-        const data = await res.json();
+        const data = await putRes.json();
         saveChannel(null); // Clear active channel state locally
         return data;
       } catch (err: any) {

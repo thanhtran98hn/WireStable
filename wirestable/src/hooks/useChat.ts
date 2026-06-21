@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useAccount, useWalletClient } from "wagmi";
-import { createPublicClient, http, isAddress, type Hash, formatUnits } from "viem";
+import { createPublicClient, http, isAddress, type Hash, formatUnits, keccak256, encodePacked } from "viem";
 import { arcTestnet } from "viem/chains";
 import { AppKit } from "@circle-fin/app-kit";
 import { createViemAdapterFromProvider } from "@circle-fin/adapter-viem-v2";
@@ -25,6 +25,96 @@ import type {
   EscrowSubmitIntent,
 } from "@/types";
 
+const USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
+const PAY_STREAM_VAULT_ADDRESS = "0x946b1c09893d596489b4de5de586616fe28c0571";
+const ERC8183_ESCROW_ADDRESS = "0x8183e5c7075c1c09893d596489b4de5de586616fe";
+
+const USDC_ABI = [
+  {
+    name: "approve",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" }
+    ],
+    outputs: [{ name: "", type: "bool" }]
+  }
+] as const;
+
+const PAY_STREAM_VAULT_ABI = [
+  {
+    name: "createStream",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "recipient", type: "address" },
+      { name: "amountPerSecond", type: "uint256" },
+      { name: "stopTime", type: "uint256" }
+    ],
+    outputs: [{ name: "", type: "uint256" }]
+  },
+  {
+    name: "withdrawFromStream",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "streamId", type: "uint256" }],
+    outputs: []
+  },
+  {
+    name: "cancelStream",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "streamId", type: "uint256" }],
+    outputs: []
+  },
+  {
+    name: "balanceOfStream",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "streamId", type: "uint256" }],
+    outputs: [{ name: "", type: "uint256" }]
+  }
+] as const;
+
+const ERC8183_ESCROW_ABI = [
+  {
+    name: "createJob",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "employee", type: "address" },
+      { name: "amount", type: "uint256" },
+      { name: "deliverableHash", type: "bytes32" }
+    ],
+    outputs: [{ name: "", type: "uint256" }]
+  },
+  {
+    name: "submitDeliverable",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "jobId", type: "uint256" },
+      { name: "url", type: "string" }
+    ],
+    outputs: []
+  },
+  {
+    name: "releaseJob",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "jobId", type: "uint256" }],
+    outputs: []
+  },
+  {
+    name: "disputeJob",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "jobId", type: "uint256" }],
+    outputs: []
+  }
+] as const;
+
 function generateId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -35,7 +125,57 @@ const publicClient = createPublicClient({
 });
 
 export function useChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (typeof window === "undefined") return [];
+    return [
+      {
+        id: "welcome_msg",
+        role: "ai",
+        type: "text",
+        content: "👋 Welcome to WireStable! I am your AI-powered stablecoin remittance manager, operating on the **Arc Chain** with gasless sponsorships.\n\nI parse natural language commands to disburse funds, execute CCTP cross-chain bridges, sweep corporate balances to USYC yield, and manage escrow contracts. Here are some active agreements on your dashboard:",
+        timestamp: new Date(Date.now() - 3600 * 1000)
+      },
+      {
+        id: "demo_stream_msg",
+        role: "ai",
+        type: "stream-counter",
+        content: "Active Salary Stream:",
+        streamCreateIntent: {
+          to: "0x73977c088ddf7324317f2ccb2b2b1a134c6dbca8",
+          amount: "500.00",
+          ratePerSecond: "165",
+          durationSeconds: "604800",
+          token: "USDC"
+        },
+        extra: {
+          streamId: 3,
+          sender: "0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1",
+          recipient: "0x73977c088ddf7324317f2ccb2b2b1a134c6dbca8",
+          amountPerSecond: 165,
+          startTime: Math.floor(Date.now() / 1000) - 2 * 24 * 3600,
+          stopTime: Math.floor(Date.now() / 1000) + 5 * 24 * 3600,
+          remainingBalance: 320 * 1e6,
+          lastWithdrawalTime: Math.floor(Date.now() / 1000) - 12 * 3600
+        },
+        timestamp: new Date(Date.now() - 30 * 60000)
+      },
+      {
+        id: "demo_escrow_msg",
+        role: "ai",
+        type: "escrow-card",
+        content: "Pending Escrow Contract:",
+        escrowCreateIntent: {
+          to: "0x73977c088ddf7324317f2ccb2b2b1a134c6dbca8",
+          amount: "250.00",
+          deliverableHash: "0x4a2e8f192b4cd859b4de5de586616fe28c057111111111111111111111111111"
+        },
+        extra: {
+          jobId: 1
+        },
+        timestamp: new Date(Date.now() - 25 * 60000)
+      }
+    ];
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [pendingIntent, setPendingIntent] = useState<TransferIntent | null>(null);
   const [pendingSwapIntent, setPendingSwapIntent] = useState<SwapIntent | null>(null);
@@ -43,7 +183,21 @@ export function useChat() {
   const [pendingBridgeIntent, setPendingBridgeIntent] = useState<BridgeIntent | null>(null);
   const [pendingStreamCreateIntent, setPendingStreamCreateIntent] = useState<StreamCreateIntent | null>(null);
   const [pendingStreamWithdrawIntent, setPendingStreamWithdrawIntent] = useState<StreamWithdrawIntent | null>(null);
-  const [activeStreams, setActiveStreams] = useState<any[]>([]);
+  const [activeStreams, setActiveStreams] = useState<any[]>(() => {
+    if (typeof window === "undefined") return [];
+    return [
+      {
+        streamId: 3,
+        sender: "0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1",
+        recipient: "0x73977c088ddf7324317f2ccb2b2b1a134c6dbca8",
+        amountPerSecond: 165,
+        startTime: Math.floor(Date.now() / 1000) - 2 * 24 * 3600,
+        stopTime: Math.floor(Date.now() / 1000) + 5 * 24 * 3600,
+        remainingBalance: 320 * 1e6,
+        lastWithdrawalTime: Math.floor(Date.now() / 1000) - 12 * 3600
+      }
+    ];
+  });
   const [pendingEscrowCreateIntent, setPendingEscrowCreateIntent] = useState<EscrowCreateIntent | null>(null);
   const [pendingEscrowSubmitIntent, setPendingEscrowSubmitIntent] = useState<EscrowSubmitIntent | null>(null);
   const [pendingCctpPreRouting, setPendingCctpPreRouting] = useState<{
@@ -51,7 +205,23 @@ export function useChat() {
     sourceChain: string;
     targetIntent: TransferIntent;
   } | null>(null);
-  const [escrowJobs, setEscrowJobs] = useState<any[]>([]);
+  const [escrowJobs, setEscrowJobs] = useState<any[]>(() => {
+    if (typeof window === "undefined") return [];
+    return [
+      {
+        jobId: 1,
+        client: "0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1",
+        provider: "0x73977c088ddf7324317f2ccb2b2b1a134c6dbca8",
+        evaluator: "0x8183e5c7075c1c09893d596489b4de5de586616fe",
+        token: USDC_ADDRESS,
+        amount: 250.00,
+        status: "FUNDED",
+        deliverableHash: "0x4a2e8f192b4cd859b4de5de586616fe28c057111111111111111111111111111",
+        deliverableUrl: "",
+        expiry: Math.floor(Date.now() / 1000) + 15 * 86400
+      }
+    ];
+  });
   const [isWithdrawingStream, setIsWithdrawingStream] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [showOnboardModal, setShowOnboardModal] = useState(false);
@@ -125,7 +295,7 @@ export function useChat() {
         
         // Sign payment token if channel is open
         if (nanopay.channel?.isOpen) {
-          const token = nanopay.signPaymentToken(0.0005);
+          const token = await nanopay.signPaymentToken(0.0005);
           if (token) {
             headers["x402-payment-token"] = token;
           }
@@ -332,30 +502,72 @@ export function useChat() {
 
   const executeStreamCreate = useCallback(
     async (intent: StreamCreateIntent): Promise<{ txHash: string; streamId: number }> => {
-      // Simulate real block latency and smart contract interaction
-      await new Promise(r => setTimeout(r, 2000));
-      
-      const newStreamId = activeStreams.length + 1;
       const rateSec = parseInt(intent.ratePerSecond) || 165;
       const durSec = parseInt(intent.durationSeconds) || 604800;
-      
+      const totalAmount = BigInt(rateSec) * BigInt(durSec);
+
+      if (!walletClient || !address) {
+        throw new Error("Wallet is not connected.");
+      }
+
+      // 1. Approve USDC spending by PayStreamVault
+      const approveRequest = await publicClient.simulateContract({
+        account: address as `0x${string}`,
+        address: USDC_ADDRESS,
+        abi: USDC_ABI,
+        functionName: 'approve',
+        args: [PAY_STREAM_VAULT_ADDRESS, totalAmount],
+      });
+      const approveHash = await walletClient.writeContract(approveRequest.request);
+      await publicClient.waitForTransactionReceipt({ hash: approveHash });
+
+      // 2. Create stream
+      const stopTime = BigInt(Math.floor(Date.now() / 1000) + durSec);
+      const createRequest = await publicClient.simulateContract({
+        account: address as `0x${string}`,
+        address: PAY_STREAM_VAULT_ADDRESS,
+        abi: PAY_STREAM_VAULT_ABI,
+        functionName: 'createStream',
+        args: [intent.to as `0x${string}`, BigInt(rateSec), stopTime],
+      });
+      const createHash = await walletClient.writeContract(createRequest.request);
+      await publicClient.waitForTransactionReceipt({ hash: createHash });
+
+      let streamId = activeStreams.length + 1;
+      try {
+        const nextId = await publicClient.readContract({
+          address: PAY_STREAM_VAULT_ADDRESS,
+          abi: [
+            {
+              name: "nextStreamId",
+              type: "function",
+              stateMutability: "view",
+              inputs: [],
+              outputs: [{ name: "", type: "uint256" }]
+            }
+          ] as const,
+          functionName: "nextStreamId",
+        });
+        streamId = Number(nextId) - 1;
+      } catch (err) {
+        console.warn("Could not read nextStreamId from contract, using default index", err);
+      }
+
       const newStream = {
-        streamId: newStreamId,
-        sender: address || "0xEmployer...",
+        streamId: streamId,
+        sender: address,
         recipient: intent.to,
         amountPerSecond: rateSec,
         startTime: Math.floor(Date.now() / 1000),
         stopTime: Math.floor(Date.now() / 1000) + durSec,
-        remainingBalance: parseFloat(intent.amount) * 1e6,
+        remainingBalance: Number(totalAmount),
         lastWithdrawalTime: Math.floor(Date.now() / 1000)
       };
 
       setActiveStreams(prev => [...prev, newStream]);
-      
-      const mockTxHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
-      return { txHash: mockTxHash, streamId: newStreamId };
+      return { txHash: createHash, streamId };
     },
-    [activeStreams, address]
+    [activeStreams, address, walletClient]
   );
 
   const executeStreamWithdraw = useCallback(
@@ -365,8 +577,6 @@ export function useChat() {
 
       setIsWithdrawingStream(true);
       try {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
         const stream = activeStreams[streamIndex];
         const now = Math.floor(Date.now() / 1000);
         const activeEnd = Math.min(now, stream.stopTime);
@@ -374,59 +584,153 @@ export function useChat() {
         const accrued = elapsed * stream.amountPerSecond;
         const claimed = Math.min(accrued, stream.remainingBalance);
 
-        if (claimed <= 0) {
-          throw new Error("No claimable streaming balance accrued yet.");
+        // SANDBOX / DISCONNECTED MOCKING:
+        const isMockMode = !walletClient || !address || streamId === 3;
+        if (isMockMode) {
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          const mockTxHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+          
+          const updatedStreams = [...activeStreams];
+          updatedStreams[streamIndex] = {
+            ...stream,
+            remainingBalance: Math.max(0, stream.remainingBalance - claimed),
+            lastWithdrawalTime: activeEnd,
+          };
+          setActiveStreams(updatedStreams);
+
+          addMessage(
+            "ai",
+            "text",
+            `✅ [Sandbox Simulation] Stream withdrawal successful! Claimed ${(claimed / 1e6).toFixed(6)} USDC from stream #${streamId}.\n\n🔗 Transaction Hash: [${mockTxHash.slice(0, 14)}...](https://testnet.arcscan.app/tx/${mockTxHash})`
+          );
+
+          return { success: true, txHash: mockTxHash, claimedAmount: claimed / 1e6 };
+        }
+
+        // Withdraw claimable funds on-chain
+        const withdrawRequest = await publicClient.simulateContract({
+          account: address as `0x${string}`,
+          address: PAY_STREAM_VAULT_ADDRESS,
+          abi: PAY_STREAM_VAULT_ABI,
+          functionName: 'withdrawFromStream',
+          args: [BigInt(streamId)],
+        });
+        const withdrawHash = await walletClient.writeContract(withdrawRequest.request);
+        await publicClient.waitForTransactionReceipt({ hash: withdrawHash });
+
+        // Query current claimable balance remaining (if the view function allows)
+        let actualClaimed = claimed;
+        try {
+          const claimableBigInt = await publicClient.readContract({
+            address: PAY_STREAM_VAULT_ADDRESS,
+            abi: PAY_STREAM_VAULT_ABI,
+            functionName: "balanceOfStream",
+            args: [BigInt(streamId)],
+          });
+          actualClaimed = Number(claimableBigInt);
+        } catch (err) {
+          console.warn("Could not read stream balance from contract, using calculated value");
         }
 
         const updatedStreams = [...activeStreams];
         updatedStreams[streamIndex] = {
           ...stream,
-          remainingBalance: stream.remainingBalance - claimed,
+          remainingBalance: Math.max(0, stream.remainingBalance - actualClaimed),
           lastWithdrawalTime: activeEnd,
         };
         setActiveStreams(updatedStreams);
 
-        const mockTxHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
-        
-        // Add text message reporting withdrawal
         addMessage(
           "ai",
           "text",
-          `✅ Stream withdrawal successful! Claimed ${(claimed / 1e6).toFixed(6)} USDC from stream #${streamId}.\n\n🔗 Transaction Hash: [${mockTxHash.slice(0, 14)}...](https://testnet.arcscan.app/tx/${mockTxHash})`
+          `✅ Stream withdrawal successful! Claimed ${(actualClaimed / 1e6).toFixed(6)} USDC from stream #${streamId}.\n\n🔗 Transaction Hash: [${withdrawHash.slice(0, 14)}...](https://testnet.arcscan.app/tx/${withdrawHash})`
         );
 
-        return { success: true, txHash: mockTxHash, claimedAmount: claimed / 1e6 };
+        return { success: true, txHash: withdrawHash, claimedAmount: actualClaimed / 1e6 };
       } finally {
         setIsWithdrawingStream(false);
       }
     },
-    [activeStreams, addMessage]
+    [activeStreams, addMessage, walletClient, address]
   );
 
   const executeEscrowCreate = useCallback(
     async (intent: EscrowCreateIntent): Promise<{ txHash: string; jobId: number }> => {
-      await new Promise(r => setTimeout(r, 2000));
+      const amountRaw = parseFloat(intent.amount);
+      const amountBigInt = BigInt(Math.round(amountRaw * 1e6));
       
-      const newJobId = escrowJobs.length + 1;
+      let deliverableHashBytes32 = "0x" + "0".repeat(64);
+      if (intent.deliverableHash) {
+        if (intent.deliverableHash.startsWith("0x")) {
+          deliverableHashBytes32 = intent.deliverableHash;
+        } else {
+          deliverableHashBytes32 = keccak256(encodePacked(["string"], [intent.deliverableHash]));
+        }
+      }
+
+      if (!walletClient || !address) {
+        throw new Error("Wallet is not connected.");
+      }
+
+      // 1. Approve USDC spend
+      const approveRequest = await publicClient.simulateContract({
+        account: address as `0x${string}`,
+        address: USDC_ADDRESS,
+        abi: USDC_ABI,
+        functionName: 'approve',
+        args: [ERC8183_ESCROW_ADDRESS, amountBigInt],
+      });
+      const approveHash = await walletClient.writeContract(approveRequest.request);
+      await publicClient.waitForTransactionReceipt({ hash: approveHash });
+
+      // 2. Create Job
+      const createRequest = await publicClient.simulateContract({
+        account: address as `0x${string}`,
+        address: ERC8183_ESCROW_ADDRESS,
+        abi: ERC8183_ESCROW_ABI,
+        functionName: 'createJob',
+        args: [intent.to as `0x${string}`, amountBigInt, deliverableHashBytes32 as `0x${string}`],
+      });
+      const createHash = await walletClient.writeContract(createRequest.request);
+      await publicClient.waitForTransactionReceipt({ hash: createHash });
+
+      let jobId = escrowJobs.length + 1;
+      try {
+        const nextId = await publicClient.readContract({
+          address: ERC8183_ESCROW_ADDRESS,
+          abi: [
+            {
+              name: "nextJobId",
+              type: "function",
+              stateMutability: "view",
+              inputs: [],
+              outputs: [{ name: "", type: "uint256" }]
+            }
+          ] as const,
+          functionName: "nextJobId",
+        });
+        jobId = Number(nextId) - 1;
+      } catch (err) {
+        console.warn("Could not read nextJobId from contract, using default index", err);
+      }
+
       const newJob = {
-        jobId: newJobId,
-        client: address || "0xClient...",
+        jobId: jobId,
+        client: address,
         provider: intent.to,
         evaluator: "0x8183e5c7075c1c09893d596489b4de5de586616fe",
-        token: "0x3600000000000000000000000000000000000000",
-        amount: parseFloat(intent.amount),
+        token: USDC_ADDRESS,
+        amount: amountRaw,
         status: "FUNDED",
-        deliverableHash: intent.deliverableHash,
+        deliverableHash: deliverableHashBytes32,
         deliverableUrl: "",
         expiry: Math.floor(Date.now() / 1000) + 30 * 86400
       };
 
       setEscrowJobs(prev => [...prev, newJob]);
-      
-      const mockTxHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
-      return { txHash: mockTxHash, jobId: newJobId };
+      return { txHash: createHash, jobId };
     },
-    [escrowJobs, address]
+    [escrowJobs, address, walletClient]
   );
 
   const executeEscrowSubmit = useCallback(
@@ -434,6 +738,42 @@ export function useChat() {
       const jobId = parseInt(intent.jobId) || 1;
       const jobIndex = escrowJobs.findIndex(j => j.jobId === jobId);
       if (jobIndex === -1) throw new Error("Job not found");
+
+      const isMockMode = !walletClient || !address || jobId === 1;
+      if (isMockMode) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const mockSubmitHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+        
+        const updatedJobs = [...escrowJobs];
+        const job = updatedJobs[jobIndex];
+        job.deliverableUrl = intent.url;
+        job.status = "SUBMITTED";
+        setEscrowJobs(updatedJobs);
+
+        // Auto release trigger simulation
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const mockReleaseHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+        job.status = "COMPLETED";
+        setEscrowJobs([...updatedJobs]);
+
+        addMessage(
+          "ai",
+          "text",
+          `🎉 **[Sandbox Simulation] Escrow Job #${jobId} Succeeded & Settled On-Chain!**\n\nWireStable's compliance agent verified the submission link: \`${intent.url}\`\n\nSignature match: \`0x98f2b3e8c281... (Pass)\`\n\nUSDC payout of **${job.amount} USDC** was released on-chain to provider address \`${job.provider}\`.\n\n🔗 Receipt: [${mockReleaseHash.slice(0, 14)}...](https://testnet.arcscan.app/tx/${mockReleaseHash})`
+        );
+        return { success: true, txHash: mockReleaseHash, message: "Sandbox validation succeeded" };
+      }
+
+      // 1. Submit deliverable URL on-chain
+      const submitRequest = await publicClient.simulateContract({
+        account: address as `0x${string}`,
+        address: ERC8183_ESCROW_ADDRESS,
+        abi: ERC8183_ESCROW_ABI,
+        functionName: 'submitDeliverable',
+        args: [BigInt(jobId), intent.url],
+      });
+      const submitHash = await walletClient.writeContract(submitRequest.request);
+      await publicClient.waitForTransactionReceipt({ hash: submitHash });
 
       const updatedJobs = [...escrowJobs];
       const job = updatedJobs[jobIndex];
@@ -454,52 +794,113 @@ export function useChat() {
       }
 
       const data = await res.json();
-      
-      // Auto-trigger release after successful verification!
+
+      // Auto-trigger release after successful verification
       await new Promise(r => setTimeout(r, 2000));
-      
+
+      // 2. Release job on-chain
+      const releaseRequest = await publicClient.simulateContract({
+        account: address as `0x${string}`,
+        address: ERC8183_ESCROW_ADDRESS,
+        abi: ERC8183_ESCROW_ABI,
+        functionName: 'releaseJob',
+        args: [BigInt(jobId)],
+      });
+      const releaseHash = await walletClient.writeContract(releaseRequest.request);
+      await publicClient.waitForTransactionReceipt({ hash: releaseHash });
+
       job.status = "COMPLETED";
       setEscrowJobs([...updatedJobs]);
 
-      const mockTxHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
-
-      // Add a text message from AI confirming settlement
       addMessage(
         "ai",
         "text",
-        `🎉 **Escrow Job #${jobId} Succeeded & Settled!**\n\nWireStable's compliance agent verified the submission link: \`${intent.url}\`\n\nSignature match: \`${data.signature.slice(0, 16)}...\`\n\nUSDC payout of **${job.amount} USDC** was released on-chain to provider address \`${job.provider}\`.\n\n🔗 Receipt: [${mockTxHash.slice(0, 14)}...](https://testnet.arcscan.app/tx/${mockTxHash})`
+        `🎉 **Escrow Job #${jobId} Succeeded & Settled On-Chain!**\n\nWireStable's compliance agent verified the submission link: \`${intent.url}\`\n\nSignature match: \`${data.signature.slice(0, 16)}...\`\n\nUSDC payout of **${job.amount} USDC** was released on-chain to provider address \`${job.provider}\`.\n\n🔗 Receipt: [${releaseHash.slice(0, 14)}...](https://testnet.arcscan.app/tx/${releaseHash})`
       );
 
-      return { success: true, txHash: mockTxHash, message: data.message };
+      return { success: true, txHash: releaseHash, message: data.message };
     },
-    [escrowJobs, addMessage]
+    [escrowJobs, addMessage, walletClient, address]
   );
 
   const handleEscrowRelease = useCallback(
     async (jobId: number) => {
       const jobIndex = escrowJobs.findIndex(j => j.jobId === jobId);
       if (jobIndex === -1) return;
-      
+
+      const isMockMode = !walletClient || !address || jobId === 1;
+      if (isMockMode) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const mockReleaseHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+        const updatedJobs = [...escrowJobs];
+        const job = updatedJobs[jobIndex];
+        job.status = "COMPLETED";
+        setEscrowJobs(updatedJobs);
+
+        addMessage(
+          "ai",
+          "text",
+          `✅ [Sandbox Simulation] Client authorized manual release of Escrow Job #${jobId} on-chain. Funds (${job.amount} USDC) have been sent to provider: \`${job.provider}\`.\n\n🔗 Tx Hash: [${mockReleaseHash.slice(0, 14)}...](https://testnet.arcscan.app/tx/${mockReleaseHash})`
+        );
+        return;
+      }
+
+      const releaseRequest = await publicClient.simulateContract({
+        account: address as `0x${string}`,
+        address: ERC8183_ESCROW_ADDRESS,
+        abi: ERC8183_ESCROW_ABI,
+        functionName: 'releaseJob',
+        args: [BigInt(jobId)],
+      });
+      const releaseHash = await walletClient.writeContract(releaseRequest.request);
+      await publicClient.waitForTransactionReceipt({ hash: releaseHash });
+
       const updatedJobs = [...escrowJobs];
       const job = updatedJobs[jobIndex];
       job.status = "COMPLETED";
       setEscrowJobs(updatedJobs);
 
-      const mockTxHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
       addMessage(
         "ai",
         "text",
-        `✅ Client authorized manual release of Escrow Job #${jobId}. Funds (${job.amount} USDC) have been sent to provider: \`${job.provider}\`.\n\n🔗 Tx Hash: [${mockTxHash.slice(0, 14)}...](https://testnet.arcscan.app/tx/${mockTxHash})`
+        `✅ Client authorized manual release of Escrow Job #${jobId} on-chain. Funds (${job.amount} USDC) have been sent to provider: \`${job.provider}\`.\n\n🔗 Tx Hash: [${releaseHash.slice(0, 14)}...](https://testnet.arcscan.app/tx/${releaseHash})`
       );
     },
-    [escrowJobs, addMessage]
+    [escrowJobs, addMessage, walletClient, address]
   );
 
   const handleEscrowDispute = useCallback(
     async (jobId: number) => {
       const jobIndex = escrowJobs.findIndex(j => j.jobId === jobId);
       if (jobIndex === -1) return;
-      
+
+      const isMockMode = !walletClient || !address || jobId === 1;
+      if (isMockMode) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const mockDisputeHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+        const updatedJobs = [...escrowJobs];
+        const job = updatedJobs[jobIndex];
+        job.status = "REJECTED";
+        setEscrowJobs(updatedJobs);
+
+        addMessage(
+          "ai",
+          "text",
+          `⚠️ [Sandbox Simulation] Escrow Job #${jobId} is now under dispute on-chain. Payout locked. Senders can reclaim the locked funds after the expiry date.\n\n🔗 Tx Hash: [${mockDisputeHash.slice(0, 14)}...](https://testnet.arcscan.app/tx/${mockDisputeHash})`
+        );
+        return;
+      }
+
+      const disputeRequest = await publicClient.simulateContract({
+        account: address as `0x${string}`,
+        address: ERC8183_ESCROW_ADDRESS,
+        abi: ERC8183_ESCROW_ABI,
+        functionName: 'disputeJob',
+        args: [BigInt(jobId)],
+      });
+      const disputeHash = await walletClient.writeContract(disputeRequest.request);
+      await publicClient.waitForTransactionReceipt({ hash: disputeHash });
+
       const updatedJobs = [...escrowJobs];
       const job = updatedJobs[jobIndex];
       job.status = "REJECTED";
@@ -508,10 +909,10 @@ export function useChat() {
       addMessage(
         "ai",
         "text",
-        `⚠️ Escrow Job #${jobId} is now under dispute. Payout locked. Senders can reclaim the locked funds after the expiry date or if an agreement is reached.`
+        `⚠️ Escrow Job #${jobId} is now under dispute on-chain. Payout locked. Senders can reclaim the locked funds after the expiry date or if an agreement is reached.\n\n🔗 Tx Hash: [${disputeHash.slice(0, 14)}...](https://testnet.arcscan.app/tx/${disputeHash})`
       );
     },
-    [escrowJobs, addMessage]
+    [escrowJobs, addMessage, walletClient, address]
   );
 
   // Track transaction status
@@ -526,39 +927,10 @@ export function useChat() {
           swapIntent,
         });
 
-        if (circleWallet.simulated || circleWallet.walletAddress) {
-          // Simulate sub-second finality on Arc
-          await new Promise((resolve) => setTimeout(resolve, 1500));
-          
-          let content = "";
-          let followUp = "";
-          if (swapIntent) {
-            const rate = swapIntent.tokenIn === "USDC" ? 0.9245 : 1.0817;
-            const amountOut = (parseFloat(swapIntent.amountIn) * rate).toFixed(4);
-            content = `✅ Transaction confirmed! Swapped ${swapIntent.amountIn} ${swapIntent.tokenIn} for ${amountOut} ${swapIntent.tokenOut} on Arc Testnet.`;
-            followUp = `Great news! 🎉 Your swap of ${swapIntent.amountIn} ${swapIntent.tokenIn} for ${amountOut} ${swapIntent.tokenOut} has been confirmed on Arc Testnet.`;
-          } else {
-            content = `✅ Transaction confirmed! Your USDC transfer has been successfully processed on Arc Testnet.`;
-            followUp = `Great news! 🎉 Your transfer has been confirmed on Arc Testnet with sub-second finality.`;
-          }
 
-          updateMessage(messageId, {
-            txStatus: "confirmed",
-            content,
-          });
-
-          // Add conversational follow-up
-          addMessage("ai", "text", followUp);
-          
-          // Refresh Circle Wallet balance
-          if (circleWallet.walletAddress) {
-            circleWallet.refreshBalance();
-          }
-          return;
-        }
 
         const receipt = await publicClient.waitForTransactionReceipt({
-          hash: txHash as Hash,
+          hash: txHash as `0x${string}`,
           timeout: 30_000, // Arc has sub-second finality, 30s is generous
         });
 
@@ -582,6 +954,11 @@ export function useChat() {
 
           // Add conversational follow-up
           addMessage("ai", "text", followUp);
+
+          // Refresh Circle Wallet balance
+          if (circleWallet.walletAddress) {
+            circleWallet.refreshBalance();
+          }
         } else {
           updateMessage(messageId, {
             txStatus: "failed",
@@ -602,7 +979,7 @@ export function useChat() {
         });
       }
     },
-    [updateMessage, addMessage, circleWallet.simulated, circleWallet.walletAddress]
+    [updateMessage, addMessage, circleWallet.refreshBalance, circleWallet.walletAddress]
   );
 
   // Main send message handler
@@ -1187,13 +1564,16 @@ export function useChat() {
 
       setIsSending(false);
 
-      const isSimulated = circleWallet.simulated || !address;
+      if (!address) {
+        addMessage("ai", "text", "❌ Wallet not connected. Please connect your Web3 wallet to complete this cross-chain transaction.");
+        return;
+      }
+
       (async () => {
         const success = await cctp.executeBridge(
           routing.amountToBridge,
           routing.sourceChain,
-          address || "",
-          isSimulated
+          address
         );
 
         if (success) {
@@ -1209,18 +1589,17 @@ export function useChat() {
           try {
             let result;
             if (circleWallet.walletAddress) {
-              const txSuccess = await circleWallet.executeTransfer(
+              const txHash = await circleWallet.executeTransfer(
                 routing.targetIntent.to,
                 routing.targetIntent.amount,
-                circleWallet.tokenId || "simulated_usdc_token_id"
+                circleWallet.tokenId || ""
               );
-              if (!txSuccess) {
+              if (!txHash) {
                 throw new Error("Circle wallet transfer failed or was cancelled.");
               }
-              const mockTxHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
               result = {
-                txHash: mockTxHash,
-                explorerUrl: `https://testnet.arcscan.app/tx/${mockTxHash}`
+                txHash,
+                explorerUrl: `https://testnet.arcscan.app/tx/${txHash}`
               };
             } else {
               result = await executeTransfer(routing.targetIntent);
@@ -1386,13 +1765,17 @@ export function useChat() {
       setIsSending(false); // Enable other interactions during long bridging step
 
       // Async executor
-      const isSimulated = circleWallet.simulated || !address;
+      if (!address && !bridge.to) {
+        addMessage("ai", "text", "❌ Wallet not connected. Please connect your Web3 wallet or specify a recipient address to bridge.");
+        return;
+      }
+
+      // Async executor
       (async () => {
         const success = await cctp.executeBridge(
           bridge.amount,
           bridge.sourceChain,
-          bridge.to || address || "",
-          isSimulated
+          bridge.to || address || ""
         );
         if (success) {
           addMessage("ai", "text", `🎉 Bridge complete! Successfully bridged ${bridge.amount} USDC from ${bridge.sourceChain} to Arc Testnet!`);
@@ -1426,18 +1809,17 @@ export function useChat() {
       } else {
         if (circleWallet.walletAddress) {
           // Send via Circle User-Controlled Wallet
-          const success = await circleWallet.executeTransfer(
+          const txHash = await circleWallet.executeTransfer(
             (currentIntent as TransferIntent).to,
             (currentIntent as TransferIntent).amount,
-            circleWallet.tokenId || "simulated_usdc_token_id"
+            circleWallet.tokenId || ""
           );
-          if (!success) {
+          if (!txHash) {
             throw new Error("Circle wallet transfer failed or was cancelled.");
           }
-          const mockTxHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
           result = {
-            txHash: mockTxHash,
-            explorerUrl: `https://testnet.arcscan.app/tx/${mockTxHash}`
+            txHash,
+            explorerUrl: `https://testnet.arcscan.app/tx/${txHash}`
           };
         } else {
           result = await executeTransfer(currentIntent as TransferIntent);

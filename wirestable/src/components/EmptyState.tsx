@@ -26,7 +26,7 @@ export function EmptyState({ onSuggestionClick, address }: EmptyStateProps) {
         })
         .catch((err) => console.error("Error loading onboarding balance summary:", err));
     } else {
-      setUnifiedBal(null);
+      setUnifiedBal(25.00); // Seed onboarding sandbox balance
     }
   }, [address]);
 
@@ -38,8 +38,8 @@ export function EmptyState({ onSuggestionClick, address }: EmptyStateProps) {
       {unifiedBal !== null && (
         <div
           style={{
-            background: "rgba(59, 130, 246, 0.05)",
-            border: "1px solid rgba(59, 130, 246, 0.15)",
+            background: "var(--color-bg-secondary)",
+            border: "1px solid var(--color-border)",
             borderRadius: "12px",
             padding: "12px 18px",
             marginTop: "12px",
@@ -50,14 +50,14 @@ export function EmptyState({ onSuggestionClick, address }: EmptyStateProps) {
             alignItems: "center"
           }}
         >
-          <span style={{ fontSize: "0.725rem", color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            🔗 Circle Gateway Connected
+          <span style={{ fontSize: "0.725rem", color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>
+            {address ? "🔗 Circle Gateway Connected" : "🧪 Circle Gateway (Sandbox Demo)"}
           </span>
-          <strong style={{ fontSize: "1.1rem", color: "#ffffff", marginTop: "4px" }}>
+          <strong style={{ fontSize: "1.1rem", color: "var(--color-text-primary)", marginTop: "4px" }}>
             Unified Portfolio: {unifiedBal.toFixed(2)} USDC
           </strong>
-          <span style={{ fontSize: "0.6875rem", color: "var(--color-text-tertiary)", marginTop: "2px" }}>
-            Funds pooled globally across Sepolia, Base, and Solana Devnet
+          <span style={{ fontSize: "0.6875rem", color: "var(--color-text-secondary)", marginTop: "2px" }}>
+            {address ? "Funds pooled globally across Sepolia, Base, and Solana Devnet" : "Showing simulated multi-chain pool balance across testnets"}
           </span>
         </div>
       )}

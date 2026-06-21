@@ -5,7 +5,7 @@ import { NanopayChannel } from "@/hooks/useNanopayments";
 
 interface ChannelCardProps {
   channel: NanopayChannel | null;
-  onOpen: (amount: string) => Promise<any>;
+  onOpen: (amount: string, isSandbox?: boolean) => Promise<any>;
   onClose: () => Promise<any>;
   isProcessing: boolean;
   walletAddress?: string;
@@ -40,6 +40,21 @@ export function ChannelCard({
     const result = await onOpen(depositAmount);
     if (!result) {
       setCardError("Failed to open channel. Verify transaction status.");
+    }
+  };
+
+  const handleOpenSandboxClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    setCardError(null);
+    const amount = parseFloat(depositAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setCardError("Please enter a valid deposit amount greater than 0.");
+      return;
+    }
+
+    const result = await onOpen(depositAmount, true);
+    if (!result) {
+      setCardError("Failed to open Sandbox channel.");
     }
   };
 
@@ -198,7 +213,7 @@ export function ChannelCard({
                   onChange={(e) => setDepositAmount(e.target.value)}
                   style={{ flex: 1 }}
                   placeholder="2.00"
-                  disabled={isProcessing || !walletAddress}
+                  disabled={isProcessing}
                 />
                 <span style={{ display: "flex", alignItems: "center", fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-secondary)" }}>
                   USDC
@@ -223,8 +238,19 @@ export function ChannelCard({
           </form>
 
           {!walletAddress && (
-            <div style={{ marginTop: "var(--space-3)", fontSize: "0.6875rem", color: "var(--color-text-tertiary)", textAlign: "center" }}>
-              ⚠️ Please connect your wallet above to fund a channel.
+            <div style={{ marginTop: "var(--space-3)", display: "flex", flexDirection: "column", gap: "8px" }}>
+              <button
+                className="btn btn-secondary"
+                onClick={handleOpenSandboxClick}
+                disabled={isProcessing}
+                style={{ width: "100%", background: "rgba(59, 130, 246, 0.12)", color: "#60a5fa", borderColor: "rgba(59, 130, 246, 0.25)", fontWeight: 700 }}
+                type="button"
+              >
+                {isProcessing ? "Opening Sandbox Channel..." : "🧪 Open Sandbox Demo Channel"}
+              </button>
+              <div style={{ fontSize: "0.6875rem", color: "var(--color-text-tertiary)", textAlign: "center" }}>
+                Connect wallet above to fund a real payment channel.
+              </div>
             </div>
           )}
         </div>

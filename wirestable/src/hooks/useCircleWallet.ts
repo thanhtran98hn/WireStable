@@ -10,7 +10,6 @@ export interface CircleWalletState {
   walletId: string | null;
   walletAddress: string | null;
   isNewUser: boolean;
-  simulated: boolean;
 }
 
 export function useCircleWallet() {
@@ -21,7 +20,6 @@ export function useCircleWallet() {
     walletId: null,
     walletAddress: null,
     isNewUser: false,
-    simulated: false,
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -29,12 +27,7 @@ export function useCircleWallet() {
   const [tokenId, setTokenId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [challengeActive, setChallengeActive] = useState(false);
-  const [simulatedChallengeActive, setSimulatedChallengeActive] = useState(false);
-  const [pendingSimulatedChallenge, setPendingSimulatedChallenge] = useState<{
-    type: "REGISTER" | "TRANSFER";
-    challengeId: string;
-    callback: (success: boolean) => void;
-  } | null>(null);
+
 
   const sdkRef = useRef<W3SSdk | null>(null);
 
@@ -84,11 +77,20 @@ export function useCircleWallet() {
   // Initialize Circle SDK client-side
   useEffect(() => {
     if (typeof window !== "undefined" && !sdkRef.current) {
-      const appId = process.env.NEXT_PUBLIC_CIRCLE_APP_ID || "mock_app_id";
+      const appId = process.env.NEXT_PUBLIC_CIRCLE_APP_ID;
+      if (!appId) {
+        console.error("[Circle UCW Hook] Critical Configuration Error: NEXT_PUBLIC_CIRCLE_APP_ID is not configured.");
+      }
       
       sdkRef.current = new W3SSdk({
-        appSettings: { appId }
+        appSettings: { appId: appId || "" }
       });
+
+      const clientUrl = process.env.NEXT_PUBLIC_CIRCLE_CLIENT_URL;
+      if (clientUrl) {
+        (sdkRef.current as any).serviceUrl = clientUrl;
+        console.log("[Circle UCW Hook] Web SDK serviceUrl overridden to:", clientUrl);
+      }
 
       // Apply a modern dark theme for seamless integration
       sdkRef.current.setThemeColor({
@@ -115,17 +117,17 @@ export function useCircleWallet() {
 
   // Set auth settings on SDK when state changes
   useEffect(() => {
-    if (sdkRef.current && state.userToken && state.encryptionKey && !state.simulated) {
+    if (sdkRef.current && state.userToken && state.encryptionKey) {
       sdkRef.current.setAuthentication({
         userToken: state.userToken,
         encryptionKey: state.encryptionKey,
       });
       console.log("[Circle UCW Hook] Authentication tokens synchronized with SDK.");
     }
-  }, [state.userToken, state.encryptionKey, state.simulated]);
+  }, [state.userToken, state.encryptionKey]);
 
   // Query wallets for active user session
-  const fetchWalletDetails = async (userToken: string, userId: string, isSimulated: boolean) => {
+  const fetchWalletDetails = async (userToken: string, userId: string) => {
     try {
       const res = await fetch(`/api/circle-wallet/wallets?userToken=${encodeURIComponent(userToken)}&userId=${encodeURIComponent(userId)}`);
       const data = await res.json();
@@ -163,7 +165,7 @@ export function useCircleWallet() {
         throw new Error(data.error || "Failed to register user.");
       }
 
-      const { userToken, encryptionKey, challengeId, simulated, isNewUser, userId } = data;
+      const { userToken, encryptionKey, challengeId, isNewUser, userId } = data;
 
       const partialState: CircleWalletState = {
         userEmail: email,
@@ -172,40 +174,13 @@ export function useCircleWallet() {
         walletId: data.walletId || null,
         walletAddress: data.address || null,
         isNewUser: !!isNewUser,
-        simulated: !!simulated,
       };
 
-      if (simulated) {
-        // Run simulated challenge flow
-        setIsLoading(false);
-        setSimulatedChallengeActive(true);
-        return new Promise<boolean>((resolve) => {
-          setPendingSimulatedChallenge({
-            type: "REGISTER",
-            challengeId,
-            callback: async (success) => {
-              setSimulatedChallengeActive(false);
-              setPendingSimulatedChallenge(null);
-              if (success) {
-                const finalState = {
-                  ...partialState,
-                  walletId: `simulated_wallet_id_${userId}`,
-                  walletAddress: "0x1234567890123456789012345678901234567890",
-                };
-                saveState(finalState);
-                resolve(true);
-              } else {
-                setError("PIN Setup setup cancelled.");
-                resolve(false);
-              }
-            }
-          });
-        });
-      }
+
 
       // If they are an existing user, just fetch their wallets
       if (!isNewUser) {
-        const details = await fetchWalletDetails(userToken, userId, false);
+        const details = await fetchWalletDetails(userToken, userId);
         saveState({
           ...partialState,
           walletId: details.walletId,
@@ -234,7 +209,7 @@ export function useCircleWallet() {
             console.log("[Circle UCW Hook] Initialization challenge complete:", result);
             try {
               setIsLoading(true);
-              const details = await fetchWalletDetails(userToken, userId, false);
+              const details = await fetchWalletDetails(userToken, userId);
               saveState({
                 ...partialState,
                 walletId: details.walletId,
@@ -259,10 +234,10 @@ export function useCircleWallet() {
   };
 
   // Perform a transaction transfer
-  const executeTransfer = async (destinationAddress: string, amount: string, tokenId: string) => {
+  const executeTransfer = async (destinationAddress: string, amount: string, tokenId: string): Promise<string | null> => {
     if (!state.userToken || !state.walletId) {
       setError("User session is not active or wallet is missing.");
-      return false;
+      return null;
     }
 
     setIsLoading(true);
@@ -286,28 +261,9 @@ export function useCircleWallet() {
         throw new Error(data.error || "Failed to create transfer challenge.");
       }
 
-      const { challengeId, simulated } = data;
+      const { challengeId, id: txId } = data;
 
-      if (simulated || state.simulated) {
-        setIsLoading(false);
-        setSimulatedChallengeActive(true);
-        return new Promise<boolean>((resolve) => {
-          setPendingSimulatedChallenge({
-            type: "TRANSFER",
-            challengeId,
-            callback: (success) => {
-              setSimulatedChallengeActive(false);
-              setPendingSimulatedChallenge(null);
-              if (success) {
-                resolve(true);
-              } else {
-                setError("Transfer transaction rejected by user.");
-                resolve(false);
-              }
-            }
-          });
-        });
-      }
+
 
       if (!sdkRef.current) {
         throw new Error("Circle SDK not initialized.");
@@ -316,16 +272,36 @@ export function useCircleWallet() {
       setChallengeActive(true);
       setIsLoading(false);
 
-      return new Promise<boolean>((resolve) => {
-        sdkRef.current!.execute(challengeId, (err, result) => {
+      return new Promise<string | null>((resolve) => {
+        sdkRef.current!.execute(challengeId, async (err, result) => {
           setChallengeActive(false);
           if (err) {
             console.error("[Circle UCW Hook] Transfer challenge failed:", err);
             setError(err.message || "Failed to sign transfer.");
-            resolve(false);
+            resolve(null);
           } else {
             console.log("[Circle UCW Hook] Transfer challenge complete:", result);
-            resolve(true);
+            // Poll for the actual on-chain transaction hash
+            try {
+              let txHash = "";
+              let retries = 20;
+              while (retries > 0 && !txHash) {
+                await new Promise((r) => setTimeout(r, 2000));
+                const statusRes = await fetch(`/api/circle-wallet/transaction?id=${txId}`);
+                if (statusRes.ok) {
+                  const statusData = await statusRes.json();
+                  if (statusData.txHash) {
+                    txHash = statusData.txHash;
+                    break;
+                  }
+                }
+                retries--;
+              }
+              resolve(txHash || null);
+            } catch (pollErr) {
+              console.error("Failed polling user transaction hash:", pollErr);
+              resolve(null);
+            }
           }
         });
       });
@@ -333,7 +309,7 @@ export function useCircleWallet() {
     } catch (err: any) {
       setError(err.message || "Transaction signature failed.");
       setIsLoading(false);
-      return false;
+      return null;
     }
   };
 
@@ -346,7 +322,6 @@ export function useCircleWallet() {
       walletId: null,
       walletAddress: null,
       isNewUser: false,
-      simulated: false,
     });
     localStorage.removeItem("wirestable_circle_wallet");
     setError(null);
@@ -359,8 +334,7 @@ export function useCircleWallet() {
     tokenId,
     error,
     challengeActive,
-    simulatedChallengeActive,
-    pendingSimulatedChallenge,
+
     registerUser,
     executeTransfer,
     disconnect,

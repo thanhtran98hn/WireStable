@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { recoverMessageAddress } from "viem";
 import type { ChatMessage } from "@/types";
+import { LoadingButton } from "@/components/loading/LoadingComponents";
 
 interface ConfirmationCardProps {
   message: ChatMessage;
@@ -25,6 +26,7 @@ export function ConfirmationCard({
 
   const [signatureStatus, setSignatureStatus] = useState<"verifying" | "valid" | "invalid" | "unsigned">("verifying");
   const [recoveredAgent, setRecoveredAgent] = useState<string | null>(null);
+  const [slippage, setSlippage] = useState<number>(0.5);
 
   useEffect(() => {
     async function verifySignature() {
@@ -266,16 +268,46 @@ export function ConfirmationCard({
             ) : (
               <>
                 <div className="confirm-card-row">
-                  <span className="confirm-card-label">Spread / Slippage</span>
-                  <span className="confirm-card-value" style={{ fontSize: "0.8125rem" }}>
-                    {(parseFloat(activeQuote.spread) * 100).toFixed(2)}% / {(parseFloat(activeQuote.slippage) * 100).toFixed(2)}%
-                  </span>
-                </div>
-                <div className="confirm-card-row">
                   <span className="confirm-card-label">StableFX Fee</span>
                   <span className="confirm-card-value" style={{ fontSize: "0.8125rem" }}>
                     {activeQuote.fee} {swapIntent?.tokenIn}
                   </span>
+                </div>
+                <div className="confirm-card-row">
+                  <span className="confirm-card-label">Spread</span>
+                  <span className="confirm-card-value" style={{ fontSize: "0.8125rem" }}>
+                    {(parseFloat(activeQuote.spread) * 100).toFixed(2)}%
+                  </span>
+                </div>
+                <div className="confirm-card-row" style={{ display: "flex", flexDirection: "column", gap: "6px", alignItems: "stretch" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span className="confirm-card-label">Slippage Tolerance</span>
+                    <span className="confirm-card-value" style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--color-primary)" }}>
+                      {slippage.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: "6px", marginTop: "2px" }}>
+                    {[0.1, 0.5, 1.0, 2.0].map((val) => (
+                      <button
+                        key={val}
+                        onClick={() => setSlippage(val)}
+                        style={{
+                          flex: 1,
+                          background: slippage === val ? "var(--color-primary)" : "var(--color-bg-secondary)",
+                          color: slippage === val ? "#fff" : "var(--color-text-primary)",
+                          border: "1px solid var(--color-border)",
+                          borderRadius: "6px",
+                          padding: "4px 0",
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          transition: "all 0.2s ease"
+                        }}
+                      >
+                        {val}%
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </>
             )}
@@ -467,32 +499,27 @@ export function ConfirmationCard({
         </div>
 
         {/* Actions */}
-        <div className="confirm-card-actions">
-          <button
-            className="btn btn-secondary btn-lg"
+        <div className="confirm-card-actions" style={{ display: "flex", gap: "12px", width: "100%" }}>
+          <LoadingButton
+            variant="secondary"
             onClick={onCancel}
             disabled={isSending}
             id="cancel-transfer-btn"
             style={{ flex: 1 }}
           >
             Cancel
-          </button>
-          <button
-            className="btn btn-primary btn-lg"
+          </LoadingButton>
+          <LoadingButton
+            variant="primary"
             onClick={onConfirm}
-            disabled={isSending || isExpired || signatureStatus === "invalid" || signatureStatus === "verifying"}
+            loading={isSending}
+            loadingText={isSwap ? "Swapping..." : isBridge ? "Bridging..." : isEscrowCreate ? "Locking..." : isEscrowSubmit ? "Submitting..." : "Sending..."}
+            disabled={isExpired || signatureStatus === "invalid" || signatureStatus === "verifying"}
             id="confirm-transfer-btn"
             style={{ flex: 2 }}
           >
-            {isSending ? (
-              <>
-                <span className="spinner" />
-                {isSwap ? "Swapping..." : isBridge ? "Bridging..." : isEscrowCreate ? "Locking..." : isEscrowSubmit ? "Submitting..." : "Sending..."}
-              </>
-            ) : (
-              isExpired ? "Expired" : isSwap ? "🔄 Confirm Swap" : isBridge ? "🌉 Confirm Bridge" : isEscrowCreate ? "🔒 Confirm & Lock" : isEscrowSubmit ? "📤 Confirm Submission" : "✅ Confirm & Sign"
-            )}
-          </button>
+            {isExpired ? "Expired" : isSwap ? "🔄 Confirm Swap" : isBridge ? "🌉 Confirm Bridge" : isEscrowCreate ? "🔒 Confirm & Lock" : isEscrowSubmit ? "📤 Confirm Submission" : "✅ Confirm & Sign"}
+          </LoadingButton>
         </div>
 
         {/* Security note */}

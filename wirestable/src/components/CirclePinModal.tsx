@@ -41,15 +41,15 @@ export function CirclePinModal({ isOpen, type, onConfirm, onCancel }: CirclePinM
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/90 p-8 shadow-2xl backdrop-blur-xl animate-scale-up">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-text-primary)]/40 backdrop-blur-md animate-fade-in">
+      <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 shadow-2xl backdrop-blur-xl animate-scale-up">
         {/* Decorative backdrop gradients */}
-        <div className="absolute -top-12 -left-12 h-40 w-40 rounded-full bg-blue-500/10 blur-3xl"></div>
-        <div className="absolute -bottom-12 -right-12 h-40 w-40 rounded-full bg-indigo-500/10 blur-3xl"></div>
+        <div className="absolute -top-12 -left-12 h-40 w-40 rounded-full bg-[var(--color-bg-secondary)] blur-3xl"></div>
+        <div className="absolute -bottom-12 -right-12 h-40 w-40 rounded-full bg-[var(--color-bg-tertiary)] blur-3xl"></div>
 
         {/* Modal Header */}
         <div className="relative z-10 text-center mb-6">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]">
             <svg
               className="h-6 w-6"
               fill="none"
@@ -74,15 +74,15 @@ export function CirclePinModal({ isOpen, type, onConfirm, onCancel }: CirclePinM
               )}
             </svg>
           </div>
-          <h3 className="text-xl font-bold text-white tracking-tight">
+          <h3 className="text-xl font-extrabold text-[var(--color-text-primary)] tracking-tight font-round">
             {type === "REGISTER" ? "Set Security PIN" : "Authorize Transaction"}
           </h3>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
             {type === "REGISTER"
               ? "Create a 6-digit PIN to secure your Circle smart wallet."
               : "Enter your 6-digit PIN to authorize this transfer request."}
           </p>
-          <span className="mt-1 inline-block text-[10px] uppercase font-bold tracking-wider text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">
+          <span className="mt-2 inline-block text-[10px] uppercase font-bold tracking-wider text-[var(--color-warning)] bg-[var(--color-warning-bg)] px-2 py-0.5 rounded-full">
             Circle UCW Sandbox Simulation
           </span>
         </div>
@@ -95,13 +95,13 @@ export function CirclePinModal({ isOpen, type, onConfirm, onCancel }: CirclePinM
                 key={i}
                 className={`h-4 w-4 rounded-full border transition-all duration-150 ${
                   i < pin.length
-                    ? "bg-blue-500 border-blue-400 scale-110 shadow-lg shadow-blue-500/50"
-                    : "border-slate-700 bg-slate-800"
+                    ? "bg-[var(--color-accent)] border-[var(--color-accent)] scale-110 shadow-lg shadow-[var(--color-accent)]/20"
+                    : "border-[var(--color-border)] bg-[var(--color-bg-secondary)]"
                 }`}
               />
             ))}
           </div>
-          {error && <p className="text-xs text-rose-500 font-semibold">{error}</p>}
+          {error && <p className="text-xs text-[var(--color-error)] font-semibold">{error}</p>}
         </div>
 
         {/* Custom Numeric Keypad */}
@@ -111,7 +111,7 @@ export function CirclePinModal({ isOpen, type, onConfirm, onCancel }: CirclePinM
               key={digit}
               type="button"
               onClick={() => handleKeyPress(digit)}
-              className="flex h-14 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 text-lg font-bold text-slate-300 hover:border-slate-700 hover:bg-slate-800 hover:text-white active:scale-95 transition-all duration-100"
+              className="flex h-14 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-lg font-extrabold text-[var(--color-text-primary)] hover:border-[var(--color-border-focus)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)] active:scale-95 transition-all duration-100 font-round"
             >
               {digit}
             </button>
@@ -119,21 +119,21 @@ export function CirclePinModal({ isOpen, type, onConfirm, onCancel }: CirclePinM
           <button
             type="button"
             onClick={onCancel}
-            className="flex h-14 items-center justify-center rounded-2xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 active:scale-95 transition-all"
+            className="flex h-14 items-center justify-center rounded-2xl text-xs font-bold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)] active:scale-95 transition-all"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={() => handleKeyPress("0")}
-            className="flex h-14 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 text-lg font-bold text-slate-300 hover:border-slate-700 hover:bg-slate-800 hover:text-white active:scale-95 transition-all duration-100"
+            className="flex h-14 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-lg font-extrabold text-[var(--color-text-primary)] hover:border-[var(--color-border-focus)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)] active:scale-95 transition-all duration-100 font-round"
           >
             0
           </button>
           <button
             type="button"
             onClick={handleBackspace}
-            className="flex h-14 items-center justify-center rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 active:scale-95 transition-all"
+            className="flex h-14 items-center justify-center rounded-2xl text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)] active:scale-95 transition-all"
           >
             <svg
               className="h-5 w-5"
@@ -158,7 +158,7 @@ export function CirclePinModal({ isOpen, type, onConfirm, onCancel }: CirclePinM
             type="button"
             onClick={handleSubmit}
             disabled={pin.length < 6}
-            className="w-full rounded-2xl bg-blue-600 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-500 disabled:opacity-50 disabled:pointer-events-none active:scale-98 transition-all"
+            className="w-full rounded-2xl bg-[var(--color-accent)] py-3.5 text-center text-sm font-bold text-[var(--color-text-inverse)] shadow-lg shadow-[var(--color-accent)]/15 hover:bg-[var(--color-accent-light)] disabled:opacity-50 disabled:pointer-events-none active:scale-98 transition-all"
           >
             {type === "REGISTER" ? "Confirm & Setup Wallet" : "Authorize & Sign"}
           </button>
