@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useAccount, useWalletClient } from "wagmi";
 import { createPublicClient, http, type Hash, encodeAbiParameters, keccak256 } from "viem";
 import { sepolia, baseSepolia, arbitrumSepolia, arcTestnet } from "viem/chains";
+import { useTxRegistry } from "@/context/TxRegistryContext";
 
 export type BridgeStep =
   | "idle"
@@ -121,6 +122,7 @@ export function useCCTP() {
 
   const { address, chainId } = useAccount();
   const { data: walletClient } = useWalletClient();
+  const { addTransaction, updateTransaction } = useTxRegistry();
 
   const resetBridge = useCallback(() => {
     setState({
@@ -146,6 +148,15 @@ export function useCCTP() {
       return false;
     }
 
+    const txId = `cctp-${Date.now()}`;
+    addTransaction({
+      id: txId,
+      type: "bridge",
+      status: "pending",
+      description: `Bridge ${amount} USDC from ${sourceChainName} to Arc`,
+      step: "switching-origin",
+    });
+
     // REAL WEB3 CCTP EXECUTION PATH
     try {
       if (!walletClient || !address) {
@@ -155,6 +166,7 @@ export function useCCTP() {
       // 1. Switch chain to source if required
       if (chainId !== source.chainId) {
         setState(prev => ({ ...prev, step: "switching-origin" }));
+        updateTransaction(txId, { step: "switching-origin" });
         try {
           await walletClient.switchChain({ id: source.chainId });
         } catch (switchErr) {
@@ -171,6 +183,7 @@ export function useCCTP() {
 
       // 2. Approve TokenMessenger
       setState(prev => ({ ...prev, step: "approving" }));
+      updateTransaction(txId, { step: "approving" });
       const approveTx = await walletClient.writeContract({
         address: source.usdc,
         abi: ERC20_ABI,
@@ -182,6 +195,7 @@ export function useCCTP() {
 
       // 3. Deposit for Burn
       setState(prev => ({ ...prev, step: "burning" }));
+      updateTransaction(txId, { step: "burning" });
       // Pad recipient address to bytes32
       const recipientBytes32 = encodeAbiParameters(
         [{ type: "address" }],
@@ -200,6 +214,7 @@ export function useCCTP() {
 
       const burnReceipt = await publicClientSource.waitForTransactionReceipt({ hash: burnTx });
       setState(prev => ({ ...prev, burnHash: burnTx }));
+      updateTransaction(txId, { txHash: burnTx });
 
       // 4. Retrieve Message bytes from logs to compute messageHash
       // CCTP MessageSent event is emitted inside depositForBurn
@@ -216,8 +231,9 @@ export function useCCTP() {
 
       // 5. Poll Circle Attestation API
       setState(prev => ({ ...prev, step: "polling-attestation" }));
+      updateTransaction(txId, { step: "polling-attestation" });
       let attestationSig = "";
-      const attestationUrl = `https://iris-api-sandbox.circle.com/attestations/${computedMessageHash}`;
+      const attestationUrl = `https://iris-api.circle.com/attestations/${computedMessageHash}`;
       
       for (let i = 0; i < 60; i++) { // Poll for up to 5 minutes
         try {
@@ -239,6 +255,7 @@ export function useCCTP() {
 
       // 6. Switch network to Arc Testnet for minting
       setState(prev => ({ ...prev, step: "switching-destination" }));
+      updateTransaction(txId, { step: "switching-destination" });
       try {
         await walletClient.switchChain({ id: destination.chainId });
       } catch (switchErr) {
@@ -252,6 +269,7 @@ export function useCCTP() {
 
       // 7. Call receiveMessage on Destination chain
       setState(prev => ({ ...prev, step: "minting" }));
+      updateTransaction(txId, { step: "minting" });
       const mintTx = await walletClient.writeContract({
         address: destination.messageTransmitter,
         abi: MESSAGE_TRANSMITTER_ABI,
@@ -266,12 +284,15 @@ export function useCCTP() {
         step: "success",
         mintHash: mintTx
       }));
+      updateTransaction(txId, { status: "success", step: "success", txHash: mintTx });
       return true;
     } catch (err: any) {
-      setState(prev => ({ ...prev, step: "failed", error: err.message || "Bridging failed." }));
+      const errMsg = err.message || "Bridging failed.";
+      setState(prev => ({ ...prev, step: "failed", error: errMsg }));
+      updateTransaction(txId, { status: "failed", step: "failed", error: errMsg });
       return false;
     }
-  }, [walletClient, address, chainId]);
+  }, [walletClient, address, chainId, addTransaction, updateTransaction]);
 
   return {
     ...state,
@@ -279,3 +300,4 @@ export function useCCTP() {
     resetBridge,
   };
 }
+

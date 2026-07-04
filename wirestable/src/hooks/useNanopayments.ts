@@ -43,7 +43,7 @@ export function useNanopayments() {
   };
 
   const openChannel = useCallback(
-    async (amount: string, address: string, executeTransferFn?: (to: string, amount: string) => Promise<any>, isSandbox = false) => {
+    async (amount: string, address: string, executeTransferFn?: (to: string, amount: string) => Promise<any>) => {
       setIsLoading(true);
       setError(null);
       try {
@@ -54,7 +54,6 @@ export function useNanopayments() {
           body: JSON.stringify({
             initialDeposit: amount,
             clientAddress: address || "0x0000000000000000000000000000000000000000",
-            isSandbox,
           }),
         });
 
@@ -65,13 +64,11 @@ export function useNanopayments() {
         const data = await res.json();
 
         // 2. Fund channel with transaction
-        if (!isSandbox) {
-          if (!executeTransferFn) {
-            throw new Error("Funding wallet function is not active. Please connect your wallet to fund the payment channel.");
-          }
-          // Send on-chain USDC to Circle Gateway deposit address
-          await executeTransferFn(data.depositAddress, amount);
+        if (!executeTransferFn) {
+          throw new Error("Funding wallet function is not active. Please connect your wallet to fund the payment channel.");
         }
+        // Send on-chain USDC to Circle Gateway deposit address
+        await executeTransferFn(data.depositAddress, amount);
 
         // 3. Save active channel state
         const newChannel: NanopayChannel = {

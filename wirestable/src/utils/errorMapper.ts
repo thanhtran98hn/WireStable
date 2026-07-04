@@ -132,7 +132,7 @@ export function mapRawError(error: unknown): MappedError {
     };
   }
 
-  // 3. Circle UCW & Pin simulation specific errors
+  // 3. Circle UCW & Pin authentication specific errors
   if (errStr.includes("pin incorrect") || errStr.includes("invalid pin") || errStr.includes("incorrect pin")) {
     return {
       code: "INCORRECT_PIN",
