@@ -33,6 +33,7 @@
 *.key
 secrets.json
 corporate_wallet.json
+corporate_state.json
 
 # Explicitly allow committing .env.example
 !.env.example
@@ -54,3 +55,9 @@ Thumbs.db
 *.tsbuildinfo
 next-env.d.ts
 
+# Hardhat compilation paths
+/artifacts/
+/cache/
+
+# Temporary files
+emojis_found.txt
