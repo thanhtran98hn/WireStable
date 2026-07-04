@@ -1,203 +1,196 @@
-# WireStable // Next-Gen Intelligent Remittance Engine
+# WireStable: Intelligent Stablecoin Remittance & Treasury Orchestrator
 
-> *An AI-Guided Conversational Rail for stable and predictable USDC transactions on Arc Testnet.*
-
----
-
-## 🌟 Vision & Core Concept
-
-**WireStable** redefines cross-border stablecoin payments by bridging the gap between natural human intent and complex blockchain transactions. Instead of navigating confusing multi-step dApp interfaces, copy-pasting hex addresses, or calculating gas fee parameters, users can execute complete USDC payments through intuitive **natural language chat and voice commands**. 
-
-By integrating **Circle's USDC payment rails** on the **Arc Testnet** and blending them with advanced **OpenAI LLM processing**, WireStable creates a zero-friction, gasless-feeling remittance experience that executes in sub-seconds.
+An AI-driven agentic interface facilitating conversational gasless payments, cross-chain CCTP bridging, automated salary streams, and multi-signature escrow settlements natively on the **Arc Testnet** and **Sepolia** networks.
 
 ---
 
-## ⚡ Capabilities Blueprint
+## 🗺️ Platform Topology
 
-| Engine Capability | Mechanism | User Impact |
-|---|---|---|
-| **Chat-to-Pay Interface** | LLM-driven semantic parser analyzes natural instructions like *"send 5 USDC to 0x..."* | Removes the complex dApp forms and replaces them with an organic, conversational text interface. |
-| **Voice-Activated Rail** | Web Speech API voice capture coupled with real-time text parsing | Enables hands-free, high-accessibility payments by simply speaking commands. |
-| **MCP Diagnostic Hub** | Intelligent conversational diagnostic card backed by Circle's documentation | Users can ask things like *"what does error 155104 mean?"* and receive immediate contextual explanations. |
-| **Adaptive Tx Tracker** | Dynamic tracking hooks monitoring block confirmation states | Visualizes real-time, interactive status indicators directly inside the chat log. |
-
----
-
-## 🛠️ Architecture Blueprint
-
-### Decoupled Core Data Flow
-
-WireStable is architected around a strict **decoupling of natural language intelligence and Web3 execution**. The AI engine functions purely as a parser, transforming ambiguous human input into safe, structured payloads. Actual wallet signature, gas estimation, and transaction broadcast remain entirely under the control of the client-side wallet providers, achieving true **zero-trust security**.
+WireStable bridges natural human intent with robust on-chain transactional infrastructure. The platform decouples conversational intelligence from critical cryptographic execution, ensuring complete self-custody while using AI agents as smart routing companions.
 
 ```mermaid
-graph LR
-    classDef userNode fill:#fcfaf2,stroke:#2b2b2b,stroke-width:2px,color:#2b2b2b,font-weight:bold;
-    classDef engineNode fill:#f4efe6,stroke:#2b2b2b,stroke-width:2px,color:#2b2b2b;
-    classDef chainNode fill:#e5dfd3,stroke:#2b2b2b,stroke-width:2px,color:#2b2b2b;
+graph TD
+    %% Node Definitions
+    User["🗣️ Natural Input (Speech/Text)"] -->|"Extract Intent"| AI["🧠 DeepSeek LLM (flash-v4)"]
+    AI -->|"Structured JSON"| ValGate{"🛡️ Validation Gate (viem)"}
+    
+    %% Error Flow
+    ValGate -->|"Invalid Address/Format"| ErrUI["⚠️ Diagnostic Card (Circle MCP)"]
+    
+    %% Valid Flow
+    ValGate -->|"Valid Intent"| ConfCard["💳 Interactive Confirmation Card"]
+    ConfCard -->|"Sign Tx"| Web3Wallet["🔑 Web3 Wallet (Wagmi/RainbowKit)"]
+    
+    %% Sponsors & Execution
+    Web3Wallet -->|"Submit Proposal"| Sponsor["⛽ Gas Sponsor Paymaster"]
+    Sponsor -->|"Sponsor Tx"| ArcChain["🌐 Arc Testnet Ledger"]
+    
+    %% Feature Routes
+    ArcChain -->|"1. Remit/Swap"| FXPool["💱 HedgingPoolRouter"]
+    ArcChain -->|"2. Salary Stream"| PayStream["⏳ PayStreamVault"]
+    ArcChain -->|"3. Escrow Settlement"| Escrow["🔒 ERC8183Escrow"]
+    ArcChain -->|"4. Bridge In"| CCTP["🌉 Circle CCTP Bridge"]
 
-    User["🗣️ Natural Language (Text/Voice)"] -->|Post to API| Parser("🧠 OpenAI GPT-4o Parser")
-    Parser -->|Return Structured JSON| Gate{"⚡ Validation Gate (viem)"}
-    
-    Gate -->|Payload Error / Hallucinated Address| FailUI("❌ Interactive Error Card")
-    Gate -->|Validated Payload| ConfirmUI("💳 Dynamic Confirmation UI")
-    
-    ConfirmUI -->|Human-in-the-loop Sign| Wallet("🔑 RainbowKit & wagmi")
-    Wallet -->|Send Transaction| Arc("🌐 Circle USDC Rail (Arc Testnet)")
-    Arc -->|Sub-second Confirmation| Tracker("🚀 Conversational Tx Tracker")
-    
-    class User,ConfirmUI userNode;
-    class Parser,Gate,FailUI,Tracker engineNode;
-    class Wallet,Arc chainNode;
+    %% Real-time Diagnostics
+    ArcChain -->|"Event Log"| Registry["📋 TxRegistryContext / Queue Widget"]
+
+    %% Style Classes
+    style User fill:#111,stroke:#3b82f6,stroke-width:2px,color:#fff
+    style AI fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#fff
+    style ValGate fill:#1f2937,stroke:#9ca3af,stroke-width:2px,color:#fff
+    style ConfCard fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#fff
+    style Web3Wallet fill:#7c2d12,stroke:#fb923c,stroke-width:2px,color:#fff
+    style ArcChain fill:#111827,stroke:#3b82f6,stroke-width:3px,color:#fff
+    style Registry fill:#180828,stroke:#c084fc,stroke-width:2px,color:#fff
 ```
 
-### Key Engineering Decisions & Tradeoffs
+---
 
-#### 1. Client-Side Wallet Signing vs. Server-Side Hot Wallets
-*   **The Choice:** All transactions are signed directly on the client using RainbowKit and MetaMask/WalletConnect.
-*   **The Rationale:** A server-side custodial model would allow fully autonomous AI payments but introduces severe custody risks, single points of failure, and complex key-management infrastructure. Keeping signatures client-side maintains the core Web3 tenant of **self-custody** while the AI acts as a smart companion.
+## ⚡ Product Surface & Core Capabilities
 
-#### 2. Human-in-the-Loop Safeguard
-*   **The Choice:** The engine *never* broadcasts a transaction directly. It generates an intermediate confirmation card first.
-*   **The Rationale:** LLMs are prone to hallucinating inputs or misinterpreting speech. The explicit verification screen acts as a semantic firewall. The user must review the exact destination address, transaction amount, and network gas fee before confirming and initiating the signature.
-
-#### 3. Address Validation & Pre-execution Gate
-*   **The Choice:** Using `viem` address utility validation before loading the confirmation UI.
-*   **The Rationale:** Instead of relying on the LLM to format addresses, the code programmatically checks address checksums via `isAddress()`. If an address is incorrect or malformed, the system intercepts the error immediately, showing a custom MCP-based explanation card instead of triggering a failing blockchain call.
+| Capability Module | Core Mechanism | Protocol Impact |
+| :--- | :--- | :--- |
+| **Conversational Rail** | Semantic parsing via `deepseek-v4-flash` to identify intents (remit, swap, stream, escrow). | Replaces complex web-forms with voice/text inputs. |
+| **Gasless Paymaster** | Custom sponsorship endpoint `/api/paymaster/sponsor` utilizing agent-signed gas funding. | Gas fees are abstracted natively; transactions feel instant and free. |
+| **Continuous Streams** | On-chain time-based token routing via the customized `PayStreamVault` contract. | Automates continuous, per-second worker compensation. |
+| **Milestone Escrow** | Standardized `ERC8183Escrow` for gig economy payments, verified by off-chain proof URLs. | Secures buyer-provider engagements with programmatic release. |
+| **Cross-Chain CCTP** | Direct interaction with Circle Cross-Chain Transfer Protocol via unified provider configs. | Allows bridging USDC from Sepolia, Base, or Arbitrum directly to Arc. |
+| **StableFX Exchange** | Server-side integration with Circle StableFX query engine and on-chain swap fallback. | Zero-slippage FX conversion (USDC ⇋ EURC) on Arc Testnet. |
 
 ---
 
-## 🔵 Circle Ecosystem Integration & Feedback
+## ⚙️ Core Protocol Contracts (Arc Testnet)
 
-### Product Integration Surface
+The transaction engine interacts directly with the following deployed contracts on the Arc Network (Chain ID: `5042002`):
 
-*   **USDC on Arc Testnet:** The core payment currency used inside the app. It provides stable, fast value transfers without price volatility.
-*   **Arc Network Integration:** Utilized as the primary transaction ledger (Chain ID: `5042002`). Arc stands out by using USDC natively as its gas token, allowing gas estimation and payments entirely in a single currency.
-*   **Circle App Kit & MCP Documentation:** The AI engine integrates documentation vectors to translate complex transaction error codes into friendly developer/user-facing diagnoses.
-
-### Developer Experience Feedback
-
-#### 🌟 What Shined
-*   **USDC-Native Gas Model:** Having transactions use USDC directly for gas fees completely solves the "cold wallet" onboarding issue. Users do not need to seed a new wallet with ETH or custom testnet tokens to pay transaction fees; having USDC is enough.
-*   **Standard Tooling Support:** Arc's compatibility with `viem`, `wagmi`, and standard RPC patterns made configuration seamless and eliminated the need for specialized libraries.
-
-#### 💡 Suggested Optimizations
-*   **Unified SDK Design:** Expanding documentation and guidelines for combining RainbowKit configurations with Circle App Kit elements will help developer velocity.
-*   **Structured API Error Codes:** Exposing more structured JSON error definitions inside the Circle Model Context Protocol (MCP) server endpoints would allow agents to automatically fetch and render more visual, structured diagnostics.
+*   **ERC8004 Registry:** [`0xee695688cc3c1fddd33afd8b6e84a1abcf59ded4`](https://testnet.arcscan.app/address/0xee695688cc3c1fddd33afd8b6e84a1abcf59ded4)
+    *   *Role:* Resolves agent validation schema signatures and verifies message authenticity.
+*   **PayStreamVault:** [`0xaa838872afb7ab462856123ffe97ed47d95e8dc5`](https://testnet.arcscan.app/address/0xaa838872afb7ab462856123ffe97ed47d95e8dc5)
+    *   *Role:* Handles continuous salary streams using micro-USDC flow rates per second.
+*   **ERC8183Escrow:** [`0xc6429a2dbbf3bd768ccc731c5f9bc918cc9cb57f`](https://testnet.arcscan.app/address/0xc6429a2dbbf3bd768ccc731c5f9bc918cc9cb57f)
+    *   *Role:* Facilitates milestone locks, worker submissions, and secure releases.
+*   **HedgingPoolRouter:** [`0x96bcd424542b360a56d10d39fab29fe920ffa4dc`](https://testnet.arcscan.app/address/0x96bcd424542b360a56d10d39fab29fe920ffa4dc)
+    *   *Role:* Manages instant conversions between USDC and EURC stablecoins.
 
 ---
 
-## 🎛️ Engine Topology & Stack
+## 🔐 Operational Security & Trust Profile
 
-The WireStable application is built on top of a modern, lightning-fast stack designed to maximize responsiveness and deliver a premium user interface.
+### 1. Human-in-the-Loop Safeguards
+WireStable enforces a secure execution pattern. The agentic parsing engine **never** broadcasts transactions directly from its own context. Instead, it generates an intermediate **Confirmation Card** for user review. This safeguards against:
+*   Semantic hallucinations or spelling mistakes in prompts.
+*   Misinterpretation of voice inputs or address structures.
+*   Unauthorized wallet spend limits.
 
-*   **Application Framework:** Next.js 16 (App Router) using React Server Components for optimal performance and SEO structure.
-*   **Web3 Connectivity:** RainbowKit + wagmi v3 + viem v2 configured natively for Arc Testnet RPC endpoints.
-*   **AI Engine:** OpenAI API (GPT-4o-mini model) utilizing highly structured system prompting for reliable intent extraction.
-*   **Voice Module:** Native HTML5 Web Speech API for instant, low-latency client-side speech recognition.
-*   **Design & Aesthetics:** Custom, handcrafted Vanilla CSS styling built around a curated Warm Beige design system with premium glassmorphic cards and interactive micro-animations.
+### 2. Sandbox Terminology Extermination
+The codebase has been sanitized to eliminate mock logic or simulation states. Every operation targets verified RPC nodes and on-chain ledger instances. If credentials (like `AGENT_PRIVATE_KEY` or `CIRCLE_API_KEY`) are missing, the server strictly throws errors, guaranteeing high-fidelity operation.
 
----
-
-## 🔒 Trust & Security Architecture
-
-*   **Zero Credential Exposure:** Private keys are never uploaded, logged, or processed on server layers. Everything occurs securely in the browser's context.
-*   **Validation Firewalls:** Rigorous schema validation guards the JSON transfer payload. Any payload missing critical variables (amount, recipient) gets safely caught and rejected before wallet signature initialization.
-*   **Environment Segregation:** Secrets like `OPENAI_API_KEY` are tightly isolated using server-side Next.js route handlers (`src/app/api/parse/route.ts`), preventing API key leakage.
-*   **Error Defense:** Interactive error catching uses MCP logic to safely capture issues without crashing the application state.
+### 3. Strict CSP Framework
+Next.js middleware enforces strict Content Security Policy (CSP) headers, allowing external requests only to verified domains (`api.deepseek.com`, `api.circle.com`, `rpc.testnet.arc.network`, and WalletConnect networks), protecting client sessions against cross-site scripting (XSS) and key interception.
 
 ---
 
-## 🚀 Local Environment Setup
+## 📂 Codebase Directory Layout
+
+```tree
+wirestable/
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── agent/identity/route.ts       # Agent metadata lookup
+│   │   │   ├── circle-wallet/                # UCW balance, wallets & challenge endpoints
+│   │   │   ├── corporate/                    # Developer-controlled wallet payout routes
+│   │   │   ├── explain-error/route.ts        # AI diagnostic lookup for Circle error codes
+│   │   │   ├── fx-quote/route.ts             # StableFX exchange quotes
+│   │   │   ├── parse/route.ts                # DeepSeek-v4 semantic parsing logic
+│   │   │   ├── paymaster/sponsor/route.ts    # Gas sponsorship sponsor engine
+│   │   │   └── swap/key/route.ts             # Circle Swap Kit key gateway
+│   │   ├── layout.tsx                        # Glassmorphic root document setup
+│   │   ├── page.tsx                          # Dashboard orchestrator view
+│   │   └── globals.css                       # Handcrafted CSS custom styling variables
+│   ├── components/
+│   │   ├── ChatView.tsx                      # Main chat view and intent controller
+│   │   ├── UnifiedTxQueueWidget.tsx          # Real-time transaction registry visualizer
+│   │   ├── EscrowStatusCard.tsx              # Interactive escrow milestone status UI
+│   │   ├── StreamCounter.tsx                 # Per-second streaming micro-USDC counter
+│   │   └── Providers.tsx                     # RainbowKit & Wagmi core configuration
+│   ├── hooks/
+│   │   ├── useCCTP.ts                        # Bridge transactions orchestration hook
+│   │   ├── useChat.ts                        # State management and API parsing handler
+│   │   └── useNanopayments.ts                # Micro-payment channel manager
+│   ├── context/
+│   │   └── TxRegistryContext.tsx             # Context provider for multi-transaction queues
+│   └── config/
+│       ├── contracts.ts                      # Deployed ABIs and Contract addresses
+│       └── wagmi.ts                          # Multichain Wagmi setup
+├── hardhat.config.js                         # Local contract compile options
+├── deployed_contracts.json                    # Deployed address mappings
+└── package.json                              # Project scripts and dependencies
+```
+
+---
+
+## 🛠️ Local Environment Quickstart
 
 ### Prerequisites
-*   **Node.js:** version `22.x` or higher
-*   **Wallet:** A browser wallet (e.g., MetaMask) configured with the **Arc Testnet** network parameters.
-*   **API Tokens:** An active OpenAI API Key and a WalletConnect Project ID.
+*   Node.js version `22.x` or higher.
+*   A browser-injected wallet (e.g. MetaMask, Coinbase Wallet) loaded with the Arc Testnet RPC.
+*   USDC faucet tokens on Arc Testnet (obtainable via the [Circle Faucet](https://faucet.circle.com/)).
 
-### Setup Guide
+### Setup Instructions
 
-1.  **Clone and Install Dependencies:**
-    Navigate to the workspace and pull the dependencies.
+1.  **Clone the Repository & Install Dependencies:**
     ```bash
     cd wirestable
     npm install
     ```
 
-2.  **Environment Configuration:**
-    Create a local environment file.
+2.  **Environment Variables Setup:**
+    Duplicate the sample environment template:
     ```bash
-    cp .env.example .env.local
+    cp .env.example .env
     ```
-    Populate `.env.local` with your operational credentials:
+    Configure the file with your active API credentials:
     ```env
-    OPENAI_API_KEY=sk-your-openai-api-key-here
-    NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your-walletconnect-project-id
+    DEEPSEEK_API_KEY=your_deepseek_api_key
+    OPENAI_API_KEY=your_openai_api_key_fallback
+    NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
+    CIRCLE_API_KEY=your_circle_api_key
+    CIRCLE_ENTITY_SECRET=your_circle_entity_secret
+    AGENT_PRIVATE_KEY=your_remittance_agent_private_key
     ```
 
-3.  **Configure Arc Testnet in Wallet:**
+3.  **Configure Arc Testnet in your Web3 Wallet:**
     *   **Network Name:** Arc Testnet
-    *   **New RPC URL:** `https://rpc.testnet.arc.network`
+    *   **RPC URL:** `https://rpc.testnet.arc.network`
     *   **Chain ID:** `5042002`
     *   **Currency Symbol:** USDC
-    *   **Block Explorer:** `https://explorer.testnet.arc.network`
+    *   **Explorer:** `https://explorer.testnet.arc.network`
 
-4.  **Acquire USDC Test Tokens:**
-    Obtain testnet USDC from the official [Circle Faucet](https://faucet.circle.com) to cover transfers and gas.
-
-5.  **Run Development Server:**
-    Spin up the app with Turbopack acceleration.
+4.  **Launch the Development Server:**
     ```bash
     npm run dev
     ```
-    Open `http://localhost:3000` in your web browser.
+    Open `http://localhost:3000` to view the platform.
 
 ---
 
 ## 🕹️ Interactive Demo Flow
 
-1.  **Establish Session:** Click the **Connect Wallet** button to bind your MetaMask/RainbowKit interface on the Arc Testnet.
-2.  **Intent Input:**
-    *   *Option A:* Type in the chat input: `"Send 5 USDC to 0x742d35Cc6634C0532925a3b844Bc454e4438f44e"`
-    *   *Option B:* Click the microphone icon and speak your remittance command.
-3.  **Human-in-the-Loop Validation:** The AI processes the prompt, validates the address, and displays a glassmorphic **Confirmation Card** with the parsed values and calculated gas estimates.
-4.  **Execute Transfer:** Click **Confirm and Sign**. Approve the transaction in your browser wallet popup.
-5.  **Live Status:** Watch the conversation thread auto-update from `Processing...` to `Confirmed! View on Arcscan` with sub-second finality.
-6.  **Ask a Question:** Ask: `"What is error 155104?"` to see the MCP assistant parse the documentation and provide a clear, conversational explanation.
+Follow these sequential steps to test the full commerce stack:
 
----
-
-## 📂 Directory Layout & Module Map
-
-```text
-wirestable/
-├── src/
-│   ├── app/
-│   │   ├── api/
-│   │   │   ├── parse/route.ts            # OpenAI structured intent extractor
-│   │   │   └── explain-error/route.ts    # Circle MCP error analyzer
-│   │   ├── layout.tsx                    # Core layout & HTML structure
-│   │   ├── page.tsx                      # Primary chat dashboard page
-│   │   └── globals.css                   # Handcrafted Warm Beige design system
-│   ├── components/
-│   │   ├── ChatView.tsx                  # Master chat orchestrator
-│   │   ├── ChatBubble.tsx                # Contextual bubble styles
-│   │   ├── ConfirmationCard.tsx          # Validation card & gas estimator
-│   │   ├── TxTracker.tsx                 # Live transaction progress tracker
-│   │   ├── ErrorExplainer.tsx            # Circle MCP documentation visualizer
-│   │   ├── EmptyState.tsx                # Welcome landing screen
-│   │   └── Providers.tsx                 # RainbowKit + wagmi configuration
-│   ├── hooks/
-│   │   ├── useChat.ts                    # State management & logic hooks
-│   │   └── useVoice.ts                   # Speech recognition controller
-│   ├── config/
-│   │   └── wagmi.ts                      # Arc Testnet custom wagmi setup
-│   └── types/
-│       └── index.ts                      # Static TypeScript interfaces
-├── next.config.ts
-├── tsconfig.json
-└── package.json
-```
-
----
-
-*WireStable — Powered by Circle and Arc.*
+1.  **Wallet Binding:** Connect your Web3 wallet using the top navigation header bar. Ensure the network is set to **Arc Testnet**.
+2.  **Conversational Remittance:**
+    *   Type: `Send 5 USDC to 0x0000000000000000000000000000000000000000` (substitute a valid address).
+    *   Or click the microphone icon and speak: *"Send 5 USDC to..."*.
+3.  **Human-in-the-Loop Validation:** Review the generated **Confirmation Card**. The agent parses the amount, recipient, and gas parameters automatically.
+4.  **Confirm & Settle:** Click **Confirm and Sign**. Confirm the pop-up transaction in your wallet. The card updates to `Confirmed!` with a direct explorer link.
+5.  **Initialize Salary Stream:**
+    *   Type: `Stream 100 USDC to 0x... over 1 week`.
+    *   Watch a real-time **Stream Counter Card** spawn in the chat, ticking up micro-USDC balances every second.
+6.  **Milestone Escrow:**
+    *   Type: `Create escrow for 50 USDC to 0x...`.
+    *   Once confirmed, input a proof link to register a deliverable for the milestone job.
+7.  **Ask a Diagnostic Question:**
+    *   Type: `What is error code 155104?`
+    *   The engine calls `/api/explain-error` to explain the specific Circle RPC code using AI.
