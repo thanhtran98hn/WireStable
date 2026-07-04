@@ -44,7 +44,6 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json({
-      simulated: false,
       balances: data.data?.tokenBalances || []
     });
   } catch (error: any) {

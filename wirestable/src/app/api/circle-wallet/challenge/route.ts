@@ -55,7 +55,6 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({
-      simulated: false,
       challengeId: data.data?.challengeId,
       ...data.data
     });

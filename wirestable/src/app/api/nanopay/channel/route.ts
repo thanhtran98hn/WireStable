@@ -15,16 +15,16 @@ const channelLedger: Record<string, {
 
 export async function POST(request: NextRequest) {
   try {
-    const { initialDeposit, clientAddress, isSandbox } = await request.json();
+    const { initialDeposit, clientAddress } = await request.json();
 
-    if (!initialDeposit || (!clientAddress && !isSandbox)) {
+    if (!initialDeposit || !clientAddress) {
       return NextResponse.json(
         { error: "initialDeposit and clientAddress are required" },
         { status: 400 }
       );
     }
 
-    const channelId = isSandbox ? `chan_sandbox_${Math.random().toString(36).substring(2, 12)}` : `chan_${Math.random().toString(36).substring(2, 12)}`;
+    const channelId = `chan_${Math.random().toString(36).substring(2, 12)}`;
     
     // Generate real private/public key for the buyer's off-chain channel signatures
     const clientPrivateKey = generatePrivateKey();
@@ -98,17 +98,7 @@ export async function PUT(request: NextRequest) {
 
     console.log(`[Circle Gateway] Settling channel ${channelId}. Cumulative Merchant payout: ${totalSpent} USDC. Refunding Buyer: ${refundAmount} USDC.`);
 
-    if (channelId.startsWith("chan_sandbox_")) {
-      return NextResponse.json({
-        success: true,
-        channelId,
-        status: "closed",
-        settledAmount: totalSpent,
-        refundAmount,
-        txHash: "0x0000000000000000000000000000000000000000",
-        explorerUrl: "https://testnet.arcscan.app/tx/0x0000000000000000000000000000000000000000"
-      });
-    }
+
 
     // Perform real on-chain transfers from Corporate Wallet if funds are settled
     const walletConfig = getWalletConfig();

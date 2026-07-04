@@ -3,8 +3,6 @@ import { privateKeyToAccount } from "viem/accounts";
 import fs from "fs";
 import path from "path";
 
-// Simulated Agent Private Key for Sandbox environments if not set in process.env
-const DEFAULT_AGENT_PRIVATE_KEY = "0x8183e5c7075c1c09893d596489b4de5de586616fe78654c60b9f1d071987c532";
 const reputationFilePath = path.resolve(process.cwd(), "agent_reputation.json");
 
 function getReputation(): number {
@@ -29,7 +27,10 @@ function saveReputation(reputation: number) {
 
 export async function GET() {
   try {
-    const privateKey = (process.env.AGENT_PRIVATE_KEY || DEFAULT_AGENT_PRIVATE_KEY) as `0x${string}`;
+    const privateKey = process.env.AGENT_PRIVATE_KEY as `0x${string}`;
+    if (!privateKey) {
+      throw new Error("AGENT_PRIVATE_KEY environment variable is missing.");
+    }
     const account = privateKeyToAccount(privateKey);
     const reputation = getReputation();
 
@@ -37,7 +38,7 @@ export async function GET() {
       success: true,
       agentName: "WireStable Agent v1",
       ipfsHashMetadata: "ipfs://QmVerifiableAgentMetadataSchemaERC8004",
-      registryAddress: "0x8004e3b79ce858c0df1b44ec069f1092eb27ef86",
+      registryAddress: "0xee695688cc3c1fddd33afd8b6e84a1abcf59ded4",
       agentAddress: account.address,
       reputationRating: reputation,
     });
@@ -61,7 +62,10 @@ export async function POST(request: Request) {
 
     saveReputation(reputation);
 
-    const privateKey = (process.env.AGENT_PRIVATE_KEY || DEFAULT_AGENT_PRIVATE_KEY) as `0x${string}`;
+    const privateKey = process.env.AGENT_PRIVATE_KEY as `0x${string}`;
+    if (!privateKey) {
+      throw new Error("AGENT_PRIVATE_KEY environment variable is missing.");
+    }
     const account = privateKeyToAccount(privateKey);
 
     return NextResponse.json({

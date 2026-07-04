@@ -44,7 +44,6 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json({
-      simulated: false,
       wallets: data.data?.wallets || []
     });
   } catch (error: any) {

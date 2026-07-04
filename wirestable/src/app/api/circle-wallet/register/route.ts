@@ -84,7 +84,6 @@ export async function POST(req: Request) {
       if (initJson.code === 155106) {
         console.log("[Circle UCW Register] User was already initialized.");
         return NextResponse.json({
-          simulated: false,
           userId,
           userToken,
           encryptionKey,
@@ -100,7 +99,6 @@ export async function POST(req: Request) {
     const challengeId = initJson.data?.challengeId;
 
     return NextResponse.json({
-      simulated: false,
       userId,
       userToken,
       encryptionKey,

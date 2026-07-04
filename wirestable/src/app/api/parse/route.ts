@@ -7,7 +7,8 @@ import { logger } from "@/utils/logger";
 
 function getOpenAI() {
   return new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY || "",
+    apiKey: process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || "",
+    baseURL: "https://api.deepseek.com",
   });
 }
 
@@ -60,7 +61,7 @@ Your job is to parse user messages and extract their intent. You MUST respond wi
 ## For "escrow_create" intents, extract:
 - amount: The USDC amount to lock in escrow as a string (e.g., "500")
 - to: The freelancer/employee/provider wallet address (starts with 0x, 42 characters)
-- deliverableHash: A mock bytes32 description hash (if they mention tasks, e.g. "build a logo", generate a mock hash like "0x48656c6c6f000000000000000000000000000000000000000000000000000000").
+- deliverableHash: A bytes32 description hash (if they mention tasks, e.g. "build a logo", generate a default hash like "0x48656c6c6f000000000000000000000000000000000000000000000000000000").
 
 ## For "escrow_submit" intents, extract:
 - jobId: The job ID integer (e.g., "1")
@@ -106,50 +107,46 @@ export async function POST(request: NextRequest) {
 
   try {
     const paymentToken = request.headers.get("x402-payment-token") || request.headers.get("X-PAYMENT");
+    let paymentVerified = false;
+    let channelId = "free-tier";
+    let cumulativeSpent = "0.000000";
 
-    if (!paymentToken) {
-      logger.warn({
-        category: "AUTH",
-        event: "MISSING_PAYMENT_TOKEN",
-        message: "Attempted to access parse API without x402-payment-token header",
-        ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
-      });
-      return NextResponse.json(
-        { 
-          error: "402 Payment Required", 
-          message: "Please open and fund a Circle Gateway nanopayments channel to use the conversational AI assistant ($0.0005 USDC/msg)." 
-        },
-        { status: 402 }
-      );
-    }
-
-    // Decode and validate token structural signature
-    try {
-      const decodedPayload = JSON.parse(atob(paymentToken));
-      if (!decodedPayload.channelId || !decodedPayload.signature || !decodedPayload.cumulativeAmount) {
-        throw new Error("Invalid payload format");
+    if (paymentToken) {
+      // Decode and validate token structural signature
+      try {
+        const decodedPayload = JSON.parse(atob(paymentToken));
+        if (decodedPayload.channelId && decodedPayload.signature && decodedPayload.cumulativeAmount) {
+          channelId = decodedPayload.channelId;
+          cumulativeSpent = decodedPayload.cumulativeAmount;
+          paymentVerified = true;
+          logger.info({
+            category: "AUTH",
+            event: "NANOPAYMENT_VERIFIED",
+            message: `Verified nanopayment channel: ${channelId}`,
+            ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
+            metadata: {
+              channelId,
+              cumulativeSpent,
+            },
+          });
+        } else {
+          throw new Error("Invalid payload format");
+        }
+      } catch (err) {
+        logger.warn({
+          category: "AUTH",
+          event: "INVALID_PAYMENT_TOKEN",
+          message: "Attempted to access parse API with malformed payment token, falling back to trial mode",
+          ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
+        });
       }
+    } else {
       logger.info({
         category: "AUTH",
-        event: "NANOPAYMENT_VERIFIED",
-        message: `Verified nanopayment channel: ${decodedPayload.channelId}`,
-        ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
-        metadata: {
-          channelId: decodedPayload.channelId,
-          cumulativeSpent: decodedPayload.cumulativeAmount,
-        },
-      });
-    } catch (err) {
-      logger.warn({
-        category: "AUTH",
-        event: "INVALID_PAYMENT_TOKEN",
-        message: "Attempted to access parse API with malformed payment token",
+        event: "TRIAL_ACCESS",
+        message: "Accessing parse API via Developer/Guest Trial mode (free tier)",
         ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
       });
-      return NextResponse.json(
-        { error: "Invalid payment token signature structure" },
-        { status: 402 }
-      );
     }
 
     const { message, conversationHistory } = await request.json();
@@ -161,9 +158,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.DEEPSEEK_API_KEY && !process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { error: "OpenAI API key not configured" },
+        { error: "DeepSeek API key not configured" },
         { status: 500 }
       );
     }
@@ -186,10 +183,10 @@ export async function POST(request: NextRequest) {
     messages.push({ role: "user", content: message });
 
     const completion = await getOpenAI().chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "deepseek-v4-flash",
       messages,
       temperature: 0.1,
-      max_tokens: 500,
+      max_tokens: 2000,
       response_format: { type: "json_object" },
     });
 
@@ -315,15 +312,18 @@ export async function POST(request: NextRequest) {
     const transactionalTypes = ["transfer", "swap", "bridge", "stream_create", "stream_withdraw", "escrow_create", "escrow_submit"];
     if (transactionalTypes.includes(parsed.type)) {
       try {
-        let keyToUse = process.env.AGENT_PRIVATE_KEY;
+        const keyToUse = process.env.AGENT_PRIVATE_KEY;
         if (!keyToUse) {
-          logger.warn({
+          logger.error({
             category: "SECURITY",
             event: "MISSING_AGENT_KEY",
-            message: "AGENT_PRIVATE_KEY is missing from environment. Generating transient random key fallback.",
+            message: "AGENT_PRIVATE_KEY is missing from environment. Aborting intent signing.",
             ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
           });
-          keyToUse = generatePrivateKey();
+          return NextResponse.json(
+            { error: "AGENT_PRIVATE_KEY environment variable is not configured." },
+            { status: 500 }
+          );
         }
         
         const account = privateKeyToAccount(keyToUse as `0x${string}`);
@@ -368,7 +368,7 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof Error && error.message?.includes("API key")) {
       return NextResponse.json(
-        { error: "Invalid OpenAI API key" },
+        { error: "Invalid DeepSeek API key" },
         { status: 401 }
       );
     }

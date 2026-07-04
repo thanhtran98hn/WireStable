@@ -3,7 +3,6 @@ import { createPublicClient, createWalletClient, http, verifyMessage, isAddress 
 import { privateKeyToAccount } from "viem/accounts";
 import { arcTestnet } from "viem/chains";
 
-const DEFAULT_AGENT_PRIVATE_KEY = "0x8183e5c7075c1c09893d596489b4de5de586616fe78654c60b9f1d071987c532";
 const USDC_ARC_ADDRESS = "0x3600000000000000000000000000000000000000";
 
 const erc20Abi = [
@@ -47,7 +46,13 @@ export async function POST(request: Request) {
     }
 
     // Initialize sponsor wallet (Paymaster)
-    const privateKey = (process.env.AGENT_PRIVATE_KEY || DEFAULT_AGENT_PRIVATE_KEY) as `0x${string}`;
+    const privateKey = process.env.AGENT_PRIVATE_KEY as `0x${string}`;
+    if (!privateKey) {
+      return NextResponse.json(
+        { success: false, error: "AGENT_PRIVATE_KEY environment variable is not configured." },
+        { status: 500 }
+      );
+    }
     const sponsorAccount = privateKeyToAccount(privateKey);
 
     const publicClient = createPublicClient({

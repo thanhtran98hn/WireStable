@@ -3,7 +3,8 @@ import OpenAI from "openai";
 
 function getOpenAI() {
   return new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY || "",
+    apiKey: process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || "",
+    baseURL: "https://api.deepseek.com",
   });
 }
 
@@ -105,12 +106,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Fall back to LLM for unknown errors
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.DEEPSEEK_API_KEY && !process.env.OPENAI_API_KEY) {
       return NextResponse.json({
         code: errorCode || "unknown",
         title: "Error Lookup Unavailable",
-        explanation: "The AI error explainer requires an OpenAI API key to be configured.",
-        suggestion: "Set OPENAI_API_KEY in your .env file, or check the Circle documentation at https://developers.circle.com for error codes.",
+        explanation: "The AI error explainer requires a DeepSeek API key to be configured.",
+        suggestion: "Set DEEPSEEK_API_KEY in your .env file, or check the Circle documentation at https://developers.circle.com for error codes.",
       });
     }
 
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
       : `Explain this blockchain/Circle error: "${errorMessage}"`;
 
     const completion = await getOpenAI().chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "deepseek-v4-flash",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userMessage },

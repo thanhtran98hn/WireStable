@@ -21,56 +21,65 @@ export interface PayoutBatch {
   redemptionNote?: string;
 }
 
-// In-memory persistence for payout batches
-let payoutBatches: PayoutBatch[] = [
-  {
-    id: "batch_payroll_jun",
-    totalAmount: "45000.00",
-    token: "USDC",
-    status: "completed",
-    createdAt: Date.now() - 5 * 24 * 3600 * 1000, // 5 days ago
-    payouts: [
-      { recipientName: "Alice (Lead Engineer)", address: "0x73ff6d57ceac4c32c292ea842df4850ed4b7dfb7", amount: "15000.00", status: "success", txHash: "0xa2b22b2b22b2b2b22b2b2b22b2b2b22b2b2b2b11111111111111111111111111" },
-      { recipientName: "Bob (Principal Designer)", address: "0x73977c088ddf7324317f2ccb2b2b1a134c6dbca8", amount: "12000.00", status: "success", txHash: "0x73977c088ddf7324317f2ccb2b2b1a134c6dbca8222222222222222222222222" },
-      { recipientName: "Charlie (PM)", address: "0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1", amount: "10000.00", status: "success", txHash: "0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1333333333333333333333333" },
-      { recipientName: "Diana (QA)", address: "0x2500000000000000000000000000000000000000", amount: "8000.00", status: "success", txHash: "0x2500000000000000000000000000000000000000444444444444444444444444" }
-    ]
-  },
-  {
-    id: "batch_contractors_eu",
-    totalAmount: "8400.00",
-    token: "EURC",
-    status: "completed",
-    createdAt: Date.now() - 12 * 24 * 3600 * 1000, // 12 days ago
-    payouts: [
-      { recipientName: "Emile (DevOps Paris)", address: "0xe2b22b2b22b2b2b22b2b2b22b2b2b22b2b2b2bee", amount: "4200.00", status: "success", txHash: "0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1555555555555555555555555" },
-      { recipientName: "Francois (Writer Brussels)", address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", amount: "4200.00", status: "success", txHash: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb922666666666666666666666666666" }
-    ]
-  },
-  {
-    id: "batch_marketing_q2",
-    totalAmount: "12500.00",
-    token: "USDC",
-    status: "completed",
-    createdAt: Date.now() - 20 * 24 * 3600 * 1000, // 20 days ago
-    payouts: [
-      { recipientName: "Inbound Marketing Inc", address: "0x73977c088ddf7324317f2ccb2b2b1a134c6dbca8", amount: "7500.00", status: "success", txHash: "0x73977c088ddf7324317f2ccb2b2b1a134c6dbca8777777777777777777777777" },
-      { recipientName: "SMM Agency", address: "0xa2b22b2b22b2b2b22b2b2b22b2b2b22b2b2b2b8888888888888888888888888", amount: "5000.00", status: "success", txHash: "0xa2b22b2b22b2b2b22b2b2b22b2b2b22b2b2b2b9999999999999999999999999" }
-    ]
-  },
-  {
-    id: "batch_pending_payroll",
-    totalAmount: "18450.00",
-    token: "USDC",
-    status: "pending_approval",
-    createdAt: Date.now() - 4 * 3600 * 1000, // 4 hours ago
-    payouts: [
-      { recipientName: "George (Technical Writer)", address: "0x73977c088ddf7324317f2ccb2b2b1a134c6dbca8", amount: "6250.00", status: "pending" },
-      { recipientName: "Hannah (Support Lead)", address: "0xa2b22b2b22b2b2b22b2b2b22b2b2b22b2b2b2b", amount: "5000.00", status: "pending" },
-      { recipientName: "Ian (Developer Advocate)", address: "0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1", amount: "7200.00", status: "pending" }
-    ]
+// In-memory persistence for temporary Maker-Checker batches pending administrative approval
+let localPendingBatches: PayoutBatch[] = [];
+
+async function getRealPayoutsFromCircle(): Promise<PayoutBatch[]> {
+  const apiKey = process.env.CIRCLE_API_KEY;
+  const entitySecret = process.env.CIRCLE_ENTITY_SECRET;
+
+  if (!apiKey || !entitySecret) {
+    return [];
   }
-];
+
+  const config = getWalletConfig();
+  const client = getClient();
+
+  try {
+    const response = await client.listTransactions({
+      walletIds: [config.walletId],
+      pageSize: 20
+    });
+    const txs = response.data?.transactions || [];
+
+    return txs.map((tx: any) => {
+      // Circle API returns amounts as string array (e.g., ["10.00"])
+      const amount = tx.amounts?.[0] || "0.00";
+      // Identify token type from contract address
+      const isUsdc = tx.tokenAddress?.toLowerCase() === "0x3600000000000000000000000000000000000000";
+      const tokenSymbol = isUsdc ? "USDC" : "EURC";
+
+      const statusMap = {
+        "COMPLETE": "completed" as const,
+        "FAILED": "failed" as const,
+        "DENIED": "failed" as const,
+        "PENDING": "approved" as const,
+      };
+
+      const status = statusMap[tx.state as keyof typeof statusMap] || "completed";
+
+      return {
+        id: tx.id,
+        totalAmount: amount,
+        token: tokenSymbol,
+        status,
+        createdAt: new Date(tx.createDate || Date.now()).getTime(),
+        payouts: [
+          {
+            recipientName: `Treasury Disbursal (${tx.operationType || "Transfer"})`,
+            address: tx.destinationAddress || "0x",
+            amount,
+            status: tx.state === "COMPLETE" ? ("success" as const) : tx.state === "FAILED" || tx.state === "DENIED" ? ("failed" as const) : ("processing" as const),
+            txHash: tx.txHash || undefined
+          }
+        ]
+      };
+    });
+  } catch (err: any) {
+    console.error("Failed to query real transactions from Circle API:", err.message || err);
+    return [];
+  }
+}
 
 export async function GET(request: NextRequest) {
   const limiter = rateLimit(request, 60);
@@ -85,7 +94,15 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    return NextResponse.json(payoutBatches);
+    // 1. Fetch real completed transactions from Arc Testnet
+    const realBatches = await getRealPayoutsFromCircle();
+
+    // 2. Fetch local Maker batches pending approval
+    const pendingBatches = localPendingBatches.filter(b => b.status === "pending_approval");
+
+    // 3. Merge and return
+    const allBatches = [...pendingBatches, ...realBatches];
+    return NextResponse.json(allBatches);
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });
   }
@@ -136,7 +153,7 @@ export async function POST(request: NextRequest) {
       createdAt: Date.now()
     };
 
-    payoutBatches.push(newBatch);
+    localPendingBatches.push(newBatch);
 
     logger.info({
       category: "TRANSACTION",
@@ -182,12 +199,12 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Missing batchId parameter" }, { status: 400 });
     }
 
-    const batchIndex = payoutBatches.findIndex((b) => b.id === batchId);
+    const batchIndex = localPendingBatches.findIndex((b) => b.id === batchId);
     if (batchIndex === -1) {
-      return NextResponse.json({ error: "Batch not found" }, { status: 404 });
+      return NextResponse.json({ error: "Batch not found or already processed" }, { status: 404 });
     }
 
-    const batch = payoutBatches[batchIndex];
+    const batch = localPendingBatches[batchIndex];
 
     if (action === "approve") {
       if (batch.status !== "pending_approval") {
@@ -236,20 +253,8 @@ export async function PUT(request: NextRequest) {
         : "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a";
 
       const updatedPayouts: Payout[] = [];
-      const isSandboxMode = process.env.NODE_ENV !== "production" || !process.env.CIRCLE_API_KEY;
 
       for (const p of batch.payouts) {
-        if (isSandboxMode) {
-          // Generate a realistic mock txHash for sandbox verification
-          const mockTxHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-          updatedPayouts.push({
-            ...p,
-            status: "success" as const,
-            txHash: mockTxHash
-          });
-          continue;
-        }
-
         try {
           const transferResponse = await client.createTransaction({
             walletId: config.walletId,
@@ -299,6 +304,9 @@ export async function PUT(request: NextRequest) {
       batch.payouts = updatedPayouts;
       batch.status = batch.payouts.some(p => p.status === "failed") ? "failed" : "completed";
 
+      // Remove from pending list
+      localPendingBatches = localPendingBatches.filter((b) => b.id !== batchId);
+
       logger.info({
         category: "TRANSACTION",
         event: "PAYOUT_BATCH_APPROVED",
@@ -314,8 +322,8 @@ export async function PUT(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: redemptionNote 
-          ? `Batch approved successfully. ${redemptionNote}` 
+        message: redemptionNote
+          ? `Batch approved successfully. ${redemptionNote}`
           : "Developer-Controlled batch disbursal executed successfully.",
         batch
       });
@@ -324,6 +332,9 @@ export async function PUT(request: NextRequest) {
     if (action === "reject") {
       batch.status = "failed";
       batch.payouts = batch.payouts.map(p => ({ ...p, status: "failed" }));
+
+      // Remove from pending list
+      localPendingBatches = localPendingBatches.filter((b) => b.id !== batchId);
 
       logger.warn({
         category: "TRANSACTION",

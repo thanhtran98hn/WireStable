@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const circleApiUrl = process.env.CIRCLE_API_URL || "https://api.circle.com";
 
     // 1. Real StableFX API Call if API Key exists
-    if (apiKey && apiKey !== "simulated" && apiKey !== "") {
+    if (apiKey && apiKey !== "") {
       try {
         const url = `${circleApiUrl}/v1/stablefx/quotes?sellAsset=${tokenIn}&buyAsset=${tokenOut}&sellAmount=${amountIn}`;
         const res = await fetchWithRetry(url, {

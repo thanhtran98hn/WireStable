@@ -19,18 +19,23 @@ export const APY_RATE = 0.0515; // 5.15% APY for USYC Yield
 
 // Default wallet coordinates
 const DEFAULT_WALLET = {
-  walletSetId: "51ee8e79-cde9-5361-bcd9-7888d51e3688",
-  walletId: "44b49a92-b898-51c8-ba6c-ae098551f262",
-  address: "0x73ff6d57ceac4c32c292ea842df4850ed4b7dfb7"
+  walletSetId: "fcfce98a-ab75-535b-8bcf-f2cf7ef54279",
+  walletId: "13cc6087-dc7a-56d3-96ad-0dc26279b3cb",
+  address: "0xaba693f488d23109bbb980be27af15c553735245"
 };
 
 const walletInfoPath = path.resolve(process.cwd(), "corporate_wallet.json");
 const statePath = path.resolve(process.cwd(), "corporate_state.json");
 
 export function getClient() {
+  const apiKey = process.env.CIRCLE_API_KEY;
+  const entitySecret = process.env.CIRCLE_ENTITY_SECRET;
+  if (!apiKey || !entitySecret) {
+    throw new Error("Circle Developer Controlled Wallet credentials (CIRCLE_API_KEY, CIRCLE_ENTITY_SECRET) are missing.");
+  }
   return initiateDeveloperControlledWalletsClient({
-    apiKey: process.env.CIRCLE_API_KEY!,
-    entitySecret: process.env.CIRCLE_ENTITY_SECRET!,
+    apiKey,
+    entitySecret,
   });
 }
 
@@ -48,8 +53,8 @@ export function getWalletConfig() {
 export function getPersistentState() {
   const defaultState = {
     autoSweep: true,
-    usycBalance: 150000.0,
-    accruedYield: 142.84592,
+    usycBalance: 0.0,
+    accruedYield: 0.0,
     lastYieldCalculation: Date.now()
   };
 
@@ -75,33 +80,78 @@ export function savePersistentState(state: any) {
 }
 
 export async function getCorporateWallet(): Promise<CorporateWalletState> {
-  const config = getWalletConfig();
+  let config = getWalletConfig();
   const state = getPersistentState();
 
   let usdcBalance = 0;
   let eurcBalance = 0;
+  let walletValid = false;
 
-  try {
-    const client = getClient();
-    const balanceResponse = await client.getWalletTokenBalance({
-      id: config.walletId
-    });
-    const balances = balanceResponse.data?.tokenBalances || [];
-    const usdc = balances.find((b: any) => b.token.symbol === "USDC");
-    const eurc = balances.find((b: any) => b.token.symbol === "EURC");
+  const apiKey = process.env.CIRCLE_API_KEY;
+  const entitySecret = process.env.CIRCLE_ENTITY_SECRET;
 
-    if (usdc) usdcBalance = parseFloat(usdc.amount);
-    if (eurc) eurcBalance = parseFloat(eurc.amount);
-  } catch (err) {
-    console.error("Failed to fetch corporate wallet balances from Circle API:", err);
+  if (apiKey && entitySecret) {
+    try {
+      const client = getClient();
+      const balanceResponse = await client.getWalletTokenBalance({
+        id: config.walletId
+      });
+      const balances = balanceResponse.data?.tokenBalances || [];
+      const usdc = balances.find((b: any) => b.token.symbol === "USDC");
+      const eurc = balances.find((b: any) => b.token.symbol === "EURC");
+
+      if (usdc) usdcBalance = parseFloat(usdc.amount);
+      if (eurc) eurcBalance = parseFloat(eurc.amount);
+      walletValid = true;
+    } catch (err) {
+      console.error("Failed to fetch corporate wallet balances from Circle API. It might be invalid or belong to a different account:", err);
+    }
+
+    // Auto-create wallet if current config is invalid/inaccessible
+    if (!walletValid) {
+      try {
+        console.log("Corporate wallet not found or inaccessible under new credentials. Auto-generating new treasury wallet on ARC-TESTNET...");
+        const client = getClient();
+        
+        // 1. Create a wallet set
+        const walletSetResponse = await client.createWalletSet({
+          name: "Corporate Treasury WalletSet",
+        });
+        const newWalletSetId = walletSetResponse.data?.walletSet?.id;
+        
+        if (newWalletSetId) {
+          // 2. Create wallet (SCA on ARC-TESTNET)
+          const walletsResponse = await client.createWallets({
+            accountType: "SCA",
+            blockchains: ["ARC-TESTNET"],
+            count: 1,
+            walletSetId: newWalletSetId,
+          });
+          
+          const newWallet = walletsResponse.data?.wallets?.[0];
+          if (newWallet) {
+            const newConfig = {
+              walletSetId: newWalletSetId,
+              walletId: newWallet.id,
+              address: newWallet.address
+            };
+            fs.writeFileSync(walletInfoPath, JSON.stringify(newConfig, null, 2), "utf-8");
+            console.log("Successfully created and saved new Corporate Treasury Wallet:", newConfig);
+            
+            config = newConfig;
+            usdcBalance = 0;
+            eurcBalance = 0;
+            walletValid = true;
+          }
+        }
+      } catch (createErr) {
+        console.error("Failed to automatically generate corporate wallet:", createErr);
+      }
+    }
   }
 
-  // PRODUCTION-SAFE BOOTSTRAP FALLBACK
-  // If we are in sandbox/dev mode or Circle balance is 0, seed realistic balances.
-  const isSandbox = process.env.NODE_ENV !== "production" || !process.env.CIRCLE_API_KEY;
-  if (isSandbox && usdcBalance === 0 && eurcBalance === 0) {
-    usdcBalance = 248500.00;
-    eurcBalance = 114200.00;
+  if (!apiKey || !entitySecret) {
+    throw new Error("Circle Developer Controlled Wallet credentials (CIRCLE_API_KEY, CIRCLE_ENTITY_SECRET) are missing. Please configure them in production environment.");
   }
 
   // Adjust balance if swept into yield
