@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { IdeaIcon, BoltIcon, DocsIcon, BrainIcon, MailIcon } from "@/components/icons/CustomIcons";
 
 interface RelatedItem {
   title: string;
   description: string;
   href: string;
-  icon: string;
+  icon: React.ReactNode;
 }
 
 export function RelatedContent() {
@@ -22,13 +23,13 @@ export function RelatedContent() {
         title: "Frequently Asked Questions",
         description: "Got questions on Smart Wallets, Paymasters, or network security? Read the FAQ.",
         href: "/faq",
-        icon: "💡"
+        icon: <IdeaIcon size={20} />
       },
       {
-        title: "Launch Chat Sandbox",
-        description: "Want to try natural-language remittance? Test the live gasless simulator.",
+        title: "Launch Chat Interface",
+        description: "Want to try natural-language remittance? Launch the chat workspace.",
         href: "/chat",
-        icon: "⚡"
+        icon: <BoltIcon size={20} />
       }
     ];
   } else if (pathname.includes("/faq")) {
@@ -37,13 +38,13 @@ export function RelatedContent() {
         title: "Developer Documentation",
         description: "Integrate our Payout APIs and Circle smart contract wallets directly.",
         href: "/docs",
-        icon: "📖"
+        icon: <DocsIcon size={20} />
       },
       {
         title: "Meet the Team",
         description: "Read about our hackathon mission to make programmable stablecoins human-friendly.",
         href: "/about",
-        icon: "🧠"
+        icon: <BrainIcon size={20} />
       }
     ];
   } else if (pathname.includes("/about")) {
@@ -52,13 +53,13 @@ export function RelatedContent() {
         title: "Contact Protocol Support",
         description: "Need custom enterprise integrations? Get in touch with our engineers.",
         href: "/contact",
-        icon: "✉️"
+        icon: <MailIcon size={20} />
       },
       {
         title: "Developer Integration Docs",
         description: "Review implementation parameters, code scripts, and paymaster code snippets.",
         href: "/docs",
-        icon: "📖"
+        icon: <DocsIcon size={20} />
       }
     ];
   } else if (pathname.includes("/contact")) {
@@ -67,13 +68,13 @@ export function RelatedContent() {
         title: "Read our FAQ",
         description: "Find instant answers about security compliance and Supported stablecoins.",
         href: "/faq",
-        icon: "💡"
+        icon: <IdeaIcon size={20} />
       },
       {
         title: "Platform Mission & Team",
         description: "Learn who is building WireStable and why we sponsor transaction fees.",
         href: "/about",
-        icon: "🧠"
+        icon: <BrainIcon size={20} />
       }
     ];
   } else if (pathname.includes("/privacy") || pathname.includes("/terms")) {
@@ -82,13 +83,13 @@ export function RelatedContent() {
         title: "Corporate Contact Support",
         description: "Have legal, compliance, or data custody questions? Send us a message.",
         href: "/contact",
-        icon: "✉️"
+        icon: <MailIcon size={20} />
       },
       {
         title: "Smart Wallet FAQ",
         description: "Learn how MPC key fragments and hardware enclaves protect user balances.",
         href: "/faq",
-        icon: "💡"
+        icon: <IdeaIcon size={20} />
       }
     ];
   } else {
@@ -98,13 +99,13 @@ export function RelatedContent() {
         title: "Developer Documentation",
         description: "Review implementation guides, API endpoints, and smart wallet codes.",
         href: "/docs",
-        icon: "📖"
+        icon: <DocsIcon size={20} />
       },
       {
-        title: "Conversational Remittance Sandbox",
+        title: "Conversational Remittance Stack",
         description: "Experience EIP-7708 gasless payouts settled in real-time.",
         href: "/chat",
-        icon: "⚡"
+        icon: <BoltIcon size={20} />
       }
     ];
   }

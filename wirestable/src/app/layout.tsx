@@ -40,10 +40,25 @@ export const metadata: Metadata = {
     description: "Send USDC across borders instantly using natural language.",
     creator: "@WireStable"
   },
+  manifest: "/favicon/site.webmanifest",
   icons: {
-    icon: "/favicon.ico"
+    icon: [
+      { url: "/favicon/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon/favicon-48x48.png", sizes: "48x48", type: "image/png" },
+      { url: "/favicon/favicon-64x64.png", sizes: "64x64", type: "image/png" },
+      { url: "/favicon/favicon-128x128.png", sizes: "128x128", type: "image/png" }
+    ],
+    apple: [
+      { url: "/favicon/apple-touch-icon.png", sizes: "180x180", type: "image/png" }
+    ],
+    other: [
+      { rel: "mask-icon", url: "/favicon/safari-pinned-tab.svg", color: "#ff6b4a" }
+    ]
   }
 };
+
+import { UnifiedTxQueueWidget } from "@/components/UnifiedTxQueueWidget";
 
 export default function RootLayout({
   children,
@@ -83,7 +98,6 @@ export default function RootLayout({
           href="https://fonts.gstatic.com"
           crossOrigin="anonymous"
         />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
         <meta name="theme-color" content="#05060b" />
         
         {/* Render Structured Schemas Server-Side */}
@@ -100,6 +114,7 @@ export default function RootLayout({
         <Providers>
           {children}
           <BottomNav />
+          <UnifiedTxQueueWidget />
         </Providers>
       </body>
     </html>

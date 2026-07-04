@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { IdeaIcon, BrainIcon, MailIcon, DocsIcon, LockIcon } from "@/components/icons/CustomIcons";
 
 interface DiscoveryItem {
   title: string;
   description: string;
   href: string;
-  icon: string;
+  icon: React.ReactNode;
   tag?: string;
 }
 
@@ -19,9 +20,9 @@ export function DiscoveryEngine({ category, currentPath }: DiscoveryEngineProps)
   // Determine contextual related content & recommendations
   let relatedItems: DiscoveryItem[] = [];
   let ctaTitle = "Ready to experience gasless stablecoin payments?";
-  let ctaSubtitle = "Onboard with your email in seconds, run mock payments, or integrate our stablecoin remittance stack.";
-  let primaryCta = { label: "Launch Chat Remit ⚡", href: "/chat" };
-  let secondaryCta = { label: "Agent Studio Sandbox 🧪", href: "/agent-studio" };
+  let ctaSubtitle = "Onboard with your email in seconds, disburse payments, or integrate our stablecoin remittance stack.";
+  let primaryCta = { label: "Launch Chat Remit", href: "/chat" };
+  let secondaryCta = { label: "Agent Studio & Orchestrator", href: "/agent-studio" };
 
   if (currentPath.includes("/docs")) {
     relatedItems = [
@@ -29,112 +30,112 @@ export function DiscoveryEngine({ category, currentPath }: DiscoveryEngineProps)
         title: "Frequently Asked Questions",
         description: "Got questions on Smart Wallets, Paymasters, or network security? Read the FAQ.",
         href: "/faq",
-        icon: "💡",
+        icon: <IdeaIcon size={20} />,
         tag: "FAQ"
       },
       {
         title: "Meet the Team",
         description: "Read about our hackathon mission to make programmable stablecoins human-friendly.",
         href: "/about",
-        icon: "🧠",
+        icon: <BrainIcon size={20} />,
         tag: "ABOUT"
       },
       {
         title: "Contact Engineering Desk",
         description: "Need help with custom enterprise payouts? Speak directly with our developers.",
         href: "/contact",
-        icon: "✉️",
+        icon: <MailIcon size={20} />,
         tag: "SUPPORT"
       }
     ];
     ctaTitle = "Build your own Stablecoin Commerce workflows";
     ctaSubtitle = "Review EIP-7708 gasless bundlers, compliance check loops, and Circle MPC wallet setups.";
-    primaryCta = { label: "Launch Chat Sandbox ⚡", href: "/chat" };
-    secondaryCta = { label: "Agent Sandbox 🧪", href: "/agent-studio" };
+    primaryCta = { label: "Launch Chat Interface", href: "/chat" };
+    secondaryCta = { label: "Agent Studio", href: "/agent-studio" };
   } else if (currentPath.includes("/faq")) {
     relatedItems = [
       {
         title: "Developer Integration Docs",
         description: "Review implementation parameters, code scripts, and paymaster code snippets.",
         href: "/docs",
-        icon: "📖",
+        icon: <DocsIcon size={20} />,
         tag: "DOCS"
       },
       {
         title: "Meet the Team",
         description: "Read about our hackathon mission to make programmable stablecoins human-friendly.",
         href: "/about",
-        icon: "🧠",
+        icon: <BrainIcon size={20} />,
         tag: "ABOUT"
       },
       {
         title: "Contact Desk",
         description: "Need custom partnership integrations? Get in touch with our team.",
         href: "/contact",
-        icon: "✉️",
+        icon: <MailIcon size={20} />,
         tag: "SUPPORT"
       }
     ];
-    ctaTitle = "Run live transaction tests in the sandbox";
+    ctaTitle = "Run live transaction streams on Arc Testnet";
     ctaSubtitle = "Experience instantaneous settlement speeds on the Arc network using our live chat interface.";
-    primaryCta = { label: "Launch Chat App ⚡", href: "/chat" };
-    secondaryCta = { label: "Agent Sandbox 🧪", href: "/agent-studio" };
+    primaryCta = { label: "Launch Chat App", href: "/chat" };
+    secondaryCta = { label: "Agent Studio", href: "/agent-studio" };
   } else if (currentPath.includes("/about") || currentPath.includes("/contact")) {
     relatedItems = [
       {
         title: "Read our FAQ",
         description: "Find instant answers about security compliance and supported stablecoins.",
         href: "/faq",
-        icon: "💡",
+        icon: <IdeaIcon size={20} />,
         tag: "FAQ"
       },
       {
         title: "Developer Integration Docs",
         description: "Review implementation parameters, code scripts, and paymaster code snippets.",
         href: "/docs",
-        icon: "📖",
+        icon: <DocsIcon size={20} />,
         tag: "DOCS"
       },
       {
         title: "Privacy Agreement",
         description: "Understand how we protect email hashes, audit logs, and on-chain telemetry.",
         href: "/privacy",
-        icon: "🔒",
+        icon: <LockIcon size={20} />,
         tag: "LEGAL"
       }
     ];
     ctaTitle = "Experience gasless conversational payments";
     ctaSubtitle = "Execute secure corporate disbursals, sweep yields, or lock corridor hedging using natural language.";
-    primaryCta = { label: "Launch Chat Remit ⚡", href: "/chat" };
-    secondaryCta = { label: "Agent Sandbox 🧪", href: "/agent-studio" };
+    primaryCta = { label: "Launch Chat Remit", href: "/chat" };
+    secondaryCta = { label: "Agent Studio", href: "/agent-studio" };
   } else if (currentPath.includes("/privacy") || currentPath.includes("/terms")) {
     relatedItems = [
       {
         title: "Smart Wallet FAQ",
         description: "Learn how MPC key fragments and hardware enclaves protect user balances.",
         href: "/faq",
-        icon: "💡",
+        icon: <IdeaIcon size={20} />,
         tag: "FAQ"
       },
       {
         title: "Contact Legal Support",
         description: "Have compliance or data custody questions? Send a direct message to our support desk.",
         href: "/contact",
-        icon: "✉️",
+        icon: <MailIcon size={20} />,
         tag: "SUPPORT"
       },
       {
         title: "Developer Docs",
         description: "Review our smart wallet SDK implementations and open-source packages.",
         href: "/docs",
-        icon: "📖",
+        icon: <DocsIcon size={20} />,
         tag: "DOCS"
       }
     ];
     ctaTitle = "Have custom compliance or custody questions?";
     ctaSubtitle = "We support customized Maker-Checker rosters, automated yield schedules, and private RPC integrations.";
-    primaryCta = { label: "Speak with Engineers ✉️", href: "/contact" };
-    secondaryCta = { label: "Developer Docs 📖", href: "/docs" };
+    primaryCta = { label: "Speak with Engineers", href: "/contact" };
+    secondaryCta = { label: "Developer Docs", href: "/docs" };
   } else {
     // Default fallback
     relatedItems = [
@@ -142,21 +143,21 @@ export function DiscoveryEngine({ category, currentPath }: DiscoveryEngineProps)
         title: "Developer Integration Docs",
         description: "Review implementation parameters, code scripts, and paymaster code snippets.",
         href: "/docs",
-        icon: "📖",
+        icon: <DocsIcon size={20} />,
         tag: "DOCS"
       },
       {
         title: "Read our FAQ",
         description: "Find instant answers about security compliance and supported stablecoins.",
         href: "/faq",
-        icon: "💡",
+        icon: <IdeaIcon size={20} />,
         tag: "FAQ"
       },
       {
         title: "Meet the Team",
         description: "Read about our hackathon mission to make programmable stablecoins human-friendly.",
         href: "/about",
-        icon: "🧠",
+        icon: <BrainIcon size={20} />,
         tag: "ABOUT"
       }
     ];

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { SarPdfReport } from "./SarPdfReport";
+import { SirenIcon, InboxIcon } from "./icons/CustomIcons";
 
 interface ComplianceAlertCardProps {
   recipientAddress: string;
@@ -51,14 +52,14 @@ export function ComplianceAlertCard({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        <span style={{ fontSize: "1.25rem" }}>🚨</span>
+        <SirenIcon size={20} className="text-red-600 animate-pulse-glow" animate />
         <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700, color: "rgb(220, 38, 38)" }}>
           Compliance & Security Block
         </h4>
       </div>
 
       <p style={{ margin: 0, fontSize: "0.8125rem", lineHeight: 1.4, color: "var(--color-text-secondary, #4b5563)" }}>
-        Our automated compliance intelligence engine (UAE FIU Sandbox Compliant) flagged this transaction as violating anti-money laundering (AML) or sanctions policies.
+        Our automated compliance intelligence engine flagged this transaction as violating anti-money laundering (AML) or sanctions policies.
       </p>
 
       <div
@@ -156,7 +157,8 @@ export function ComplianceAlertCard({
               onMouseEnter={(e) => e.currentTarget.style.background = "rgb(185, 28, 28)"}
               onMouseLeave={(e) => e.currentTarget.style.background = "rgb(220, 38, 38)"}
             >
-              {pdfLoading ? "Generating PDF..." : "📥 Download Signed SAR Audit PDF"}
+              <InboxIcon size={14} className="text-white" />
+              {pdfLoading ? "Generating PDF..." : "Download Signed SAR Audit PDF"}
             </button>
           )}
         </PDFDownloadLink>
@@ -182,3 +184,4 @@ export function ComplianceAlertCard({
     </div>
   );
 }
+

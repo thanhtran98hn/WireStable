@@ -18,6 +18,7 @@ import {
   SystemModalProps,
 } from "@/types/modal";
 import { mapRawError } from "@/utils/errorMapper";
+import { PartyIcon } from "@/components/icons/CustomIcons";
 
 // 1. Confirmation Modal
 export function ConfirmationModal({
@@ -232,8 +233,8 @@ export function SuccessModal({
         <p className="text-[var(--color-text-secondary)]">{description}</p>
 
         {showCelebration && (
-          <div className="relative mt-4 flex items-center justify-center p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 text-emerald-400 font-bold overflow-hidden">
-            🎉 Action Confirmed with Finality
+          <div className="relative mt-4 flex items-center justify-center p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 text-emerald-400 font-bold overflow-hidden gap-2">
+            <PartyIcon size={18} /> Action Confirmed with Finality
           </div>
         )}
       </ModalBody>

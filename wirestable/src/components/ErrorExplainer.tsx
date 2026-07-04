@@ -1,6 +1,7 @@
 "use client";
 
 import type { ChatMessage } from "@/types";
+import { WarningIcon } from "@/components/icons/CustomIcons";
 
 interface ErrorExplainerProps {
   message: ChatMessage;
@@ -14,8 +15,8 @@ export function ErrorExplainer({ message }: ErrorExplainerProps) {
   return (
     <div className="chat-bubble chat-bubble-ai" style={{ maxWidth: "480px" }}>
       <div className="error-card">
-        <div className="error-card-title">
-          🔍 Error {errorDetails.code}: {errorDetails.title}
+        <div className="error-card-title" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <WarningIcon size={14} className="text-[var(--color-error)]" /> Error {errorDetails.code}: {errorDetails.title}
         </div>
         <div className="error-card-message">
           <p style={{ marginBottom: "var(--space-3)" }}>

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ChatMessage } from "@/types";
+import { CheckIcon, CloseIcon, HourglassIcon } from "./icons/CustomIcons";
 
 interface TxTrackerProps {
   message: ChatMessage;
@@ -29,12 +30,14 @@ export function TxTracker({ message }: TxTrackerProps) {
         {/* Header */}
         <div className="tx-tracker-header">
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-            <span style={{ fontSize: "1.125rem" }}>
-              {txStatus === "confirmed"
-                ? "✅"
-                : txStatus === "failed"
-                ? "❌"
-                : "⏳"}
+            <span style={{ display: "inline-flex", alignItems: "center" }}>
+              {txStatus === "confirmed" ? (
+                <CheckIcon size={18} />
+              ) : txStatus === "failed" ? (
+                <CloseIcon size={18} />
+              ) : (
+                <HourglassIcon size={18} animate />
+              )}
             </span>
             <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
               {message.swapIntent
@@ -44,9 +47,9 @@ export function TxTracker({ message }: TxTrackerProps) {
                   ? "Swap Failed"
                   : "Processing Swap..."
                 : txStatus === "confirmed"
-                ? "Transfer Confirmed"
+                ? "Remittance Confirmed"
                 : txStatus === "failed"
-                ? "Transfer Failed"
+                ? "Remittance Failed"
                 : "Processing..."}
             </span>
           </div>
@@ -134,3 +137,4 @@ export function TxTracker({ message }: TxTrackerProps) {
     </div>
   );
 }
+

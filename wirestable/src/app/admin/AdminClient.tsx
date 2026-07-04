@@ -5,6 +5,7 @@ import { useCorporateAdmin } from "@/hooks/useCorporateAdmin";
 import { YieldAnalytics } from "@/components/YieldAnalytics";
 import { LPAnalytics } from "@/components/LPAnalytics";
 import { Navbar } from "@/components/Navbar";
+import { WarningIcon, BoltIcon } from "@/components/icons/CustomIcons";
 
 export default function AdminPage() {
   const {
@@ -107,14 +108,14 @@ Charlie (Copywriter),0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1,95.50`;
           className="btn btn-secondary btn-sm"
           style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none", fontSize: "11px", fontWeight: "bold", padding: "6px 12px", borderRadius: "8px" }}
         >
-          ⚡ Agent Studio
+          <BoltIcon size={12} /> Agent Studio
         </a>
         <a
           href="/chat"
           className="btn btn-secondary btn-sm"
           style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none", fontSize: "11px", fontWeight: "bold", padding: "6px 12px", borderRadius: "8px" }}
         >
-          💬 Chat Interface
+          Chat Interface
         </a>
       </Navbar>
 
@@ -153,10 +154,10 @@ Charlie (Copywriter),0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1,95.50`;
                     <span>{wallet.address.slice(0, 14)}...{wallet.address.slice(-10)}</span>
                     <button
                       onClick={() => navigator.clipboard.writeText(wallet.address)}
-                      style={{ background: "none", border: "none", color: "var(--color-primary)", cursor: "pointer", fontSize: "0.75rem" }}
+                      style={{ background: "none", border: "none", color: "var(--color-primary)", cursor: "pointer", fontSize: "0.75rem", fontWeight: "bold" }}
                       title="Copy Address"
                     >
-                      📋
+                      Copy
                     </button>
                   </div>
                 </div>
@@ -184,7 +185,6 @@ Charlie (Copywriter),0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1,95.50`;
               </div>
             ) : (
               <div style={{ textAlign: "center", padding: "var(--space-4) 0" }}>
-                <div style={{ fontSize: "2rem", marginBottom: "var(--space-2)" }}>🔑</div>
                 <p style={{ fontSize: "0.8125rem", color: "var(--color-text-secondary)", marginBottom: "var(--space-4)" }}>
                   No corporate treasury wallet is currently active.
                 </p>
@@ -232,66 +232,75 @@ Charlie (Copywriter),0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1,95.50`;
             </div>
 
             {/* Token Selector */}
-            <div style={{ display: "flex", gap: "var(--space-4)", marginBottom: "var(--space-4)", alignItems: "center" }}>
-              <span style={{ fontSize: "0.8125rem", color: "var(--color-text-secondary)" }}>Disbursal Token:</span>
-              <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.8125rem", cursor: "pointer" }}>
-                <input
-                  type="radio"
-                  name="token"
-                  checked={tokenChoice === "USDC"}
-                  onChange={() => setTokenChoice("USDC")}
-                />
-                USDC
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.8125rem", cursor: "pointer" }}>
-                <input
-                  type="radio"
-                  name="token"
-                  checked={tokenChoice === "EURC"}
-                  onChange={() => setTokenChoice("EURC")}
-                />
-                EURC
-              </label>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "var(--space-4)" }}>
+              <div style={{ display: "flex", gap: "var(--space-4)", alignItems: "center" }}>
+                <span style={{ fontSize: "0.8125rem", color: "var(--color-text-secondary)" }}>Disbursal Token:</span>
+                <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.8125rem", cursor: "pointer" }}>
+                  <input
+                    type="radio"
+                    name="token"
+                    checked={tokenChoice === "USDC"}
+                    onChange={() => setTokenChoice("USDC")}
+                  />
+                  USDC
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.8125rem", cursor: "pointer" }}>
+                  <input
+                    type="radio"
+                    name="token"
+                    checked={tokenChoice === "EURC"}
+                    onChange={() => setTokenChoice("EURC")}
+                  />
+                  EURC
+                </label>
+              </div>
+              <p style={{ fontSize: "0.6875rem", color: "var(--color-text-tertiary)", margin: 0 }}>
+                ℹ️ Select the stablecoin to disburse. USDC runs natively on Arc with sub-second finality; EURC uses optimized option corridors for European currency hedging.
+              </p>
             </div>
 
             {/* Drag & Drop Area */}
-            <div
-              onDragEnter={handleDrag}
-              onDragOver={handleDrag}
-              onDragLeave={handleDrag}
-              onDrop={handleDrop}
-              style={{
-                border: dragActive ? "2px dashed var(--color-primary)" : "2px dashed var(--color-border)",
-                background: dragActive ? "rgba(59, 130, 246, 0.05)" : "var(--color-bg-secondary)",
-                borderRadius: "var(--radius-md)",
-                padding: "var(--space-4)",
-                textAlign: "center",
-                cursor: "pointer",
-                position: "relative",
-                marginBottom: "var(--space-4)"
-              }}
-            >
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleFileUpload}
+            <div style={{ marginBottom: "var(--space-4)" }}>
+              <div
+                onDragEnter={handleDrag}
+                onDragOver={handleDrag}
+                onDragLeave={handleDrag}
+                onDrop={handleDrop}
                 style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  opacity: 0,
-                  cursor: "pointer"
+                  border: dragActive ? "2px dashed var(--color-primary)" : "2px dashed var(--color-border)",
+                  background: dragActive ? "rgba(59, 130, 246, 0.05)" : "var(--color-bg-secondary)",
+                  borderRadius: "var(--radius-md)",
+                  padding: "var(--space-4)",
+                  textAlign: "center",
+                  cursor: "pointer",
+                  position: "relative",
+                  marginBottom: "6px"
                 }}
-              />
-              <span style={{ fontSize: "1.5rem" }}>📁</span>
-              <p style={{ fontSize: "0.8125rem", marginTop: "6px", color: "var(--color-text-secondary)" }}>
-                Drag and drop a <strong>.csv</strong> file here, or click to upload.
+              >
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileUpload}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    opacity: 0,
+                    cursor: "pointer"
+                  }}
+                />
+                <p style={{ fontSize: "0.8125rem", marginTop: "6px", color: "var(--color-text-secondary)" }}>
+                  Drag and drop a <strong>.csv</strong> file here, or click to upload.
+                </p>
+                <span style={{ fontSize: "0.6875rem", color: "var(--color-text-tertiary)" }}>
+                  Format: name, address, amount
+                </span>
+              </div>
+              <p style={{ fontSize: "0.6875rem", color: "var(--color-text-tertiary)", margin: 0 }}>
+                ℹ️ File format requirements: Standard CSV containing `recipientName`, `address` (0x...), and `amount` (e.g. 150.00) columns.
               </p>
-              <span style={{ fontSize: "0.6875rem", color: "var(--color-text-tertiary)" }}>
-                Format: name, address, amount
-              </span>
             </div>
 
             {/* CSV Textarea Input */}
@@ -302,7 +311,7 @@ Charlie (Copywriter),0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1,95.50`;
               <textarea
                 value={csvInput}
                 onChange={handleCsvChange}
-                placeholder="recipientName,address,amount&#10;Alice,0x...,150.00&#10;Bob,0x...,200.00"
+                placeholder="recipientName,address,amount&#10;Alice Dev,0xa2b22b2b22b2b2b22b2b2b22b2b2b22b2b2b2b,250.00&#10;Bob Designer,0x73977c088ddf7324317f2ccb2b2b1a134c6dbca8,180.00"
                 style={{
                   width: "100%",
                   height: "120px",
@@ -316,6 +325,9 @@ Charlie (Copywriter),0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1,95.50`;
                   marginTop: "6px"
                 }}
               />
+              <p style={{ fontSize: "0.6875rem", color: "var(--color-text-tertiary)", marginTop: "4px", marginBottom: 0 }}>
+                ℹ️ Paste rows manually using comma separators. Ensure each wallet address matches the target network (EVM-compatible).
+              </p>
             </div>
 
             {/* Parsed Preview */}
@@ -331,16 +343,34 @@ Charlie (Copywriter),0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1,95.50`;
                         <th style={{ padding: "8px" }}>Name</th>
                         <th style={{ padding: "8px" }}>Address</th>
                         <th style={{ padding: "8px" }}>Amount</th>
+                        <th style={{ padding: "8px" }}>Risk / Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {parsedPreview.map((item, idx) => (
-                        <tr key={idx} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                          <td style={{ padding: "8px" }}>{item.recipientName}</td>
-                          <td style={{ padding: "8px", fontFamily: "monospace" }}>{item.address.slice(0, 10)}...{item.address.slice(-6)}</td>
-                          <td style={{ padding: "8px", fontWeight: 600 }}>{item.amount} {tokenChoice}</td>
-                        </tr>
-                      ))}
+                      {parsedPreview.map((item, idx) => {
+                        const isAddrValid = /^0x[a-fA-F0-9]{40}$/.test(item.address);
+                        const valAmount = parseFloat(item.amount);
+                        const isAmtValid = !isNaN(valAmount) && valAmount > 0;
+                        const isHighValue = isAmtValid && valAmount > 500;
+
+                        return (
+                          <tr key={idx} style={{ borderBottom: "1px solid var(--color-border)", background: (!isAddrValid || !isAmtValid) ? "rgba(239, 68, 68, 0.04)" : "transparent" }}>
+                            <td style={{ padding: "8px" }}>{item.recipientName}</td>
+                            <td style={{ padding: "8px", fontFamily: "monospace", color: isAddrValid ? "inherit" : "var(--color-error)" }}>
+                              {isAddrValid ? `${item.address.slice(0, 12)}...${item.address.slice(-8)}` : `Invalid: ${item.address}`}
+                            </td>
+                            <td style={{ padding: "8px", fontWeight: 600, color: isAmtValid ? "inherit" : "var(--color-error)" }}>
+                              {isAmtValid ? `${item.amount} ${tokenChoice}` : "Invalid Amount"}
+                            </td>
+                            <td style={{ padding: "8px" }}>
+                              {!isAddrValid && <span style={{ color: "var(--color-error)", fontWeight: 700 }}>Invalid Address</span>}
+                              {isAddrValid && !isAmtValid && <span style={{ color: "var(--color-error)", fontWeight: 700 }}>Invalid Amount</span>}
+                              {isAddrValid && isAmtValid && isHighValue && <span style={{ color: "var(--color-warning)", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "4px" }}><WarningIcon size={12} /> High Value (&gt;500)</span>}
+                              {isAddrValid && isAmtValid && !isHighValue && <span style={{ color: "var(--color-success)", fontWeight: 700 }}>✓ Verified</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -349,11 +379,16 @@ Charlie (Copywriter),0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1,95.50`;
 
             <button
               className="btn btn-primary"
-              disabled={parsedPreview.length === 0 || isLoading || !wallet?.created}
+              disabled={
+                parsedPreview.length === 0 || 
+                isLoading || 
+                !wallet?.created ||
+                parsedPreview.some(item => !/^0x[a-fA-F0-9]{40}$/.test(item.address) || isNaN(parseFloat(item.amount)) || parseFloat(item.amount) <= 0)
+              }
               onClick={handleSubmitBatch}
               style={{ width: "100%" }}
             >
-              {isLoading ? "Submitting..." : !wallet?.created ? "Generate Wallet Set First" : "📤 Submit Payout Batch for Approval"}
+              {isLoading ? "Submitting..." : !wallet?.created ? "Generate Wallet Set First" : "Submit Payout Batch for Approval"}
             </button>
           </div>
 
@@ -389,7 +424,7 @@ Charlie (Copywriter),0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1,95.50`;
                         </div>
                         {batch.redemptionNote && (
                           <div style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: 600, marginTop: "4px" }}>
-                            💡 {batch.redemptionNote}
+                            Note: {batch.redemptionNote}
                           </div>
                         )}
                       </div>
@@ -430,7 +465,7 @@ Charlie (Copywriter),0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1,95.50`;
                               <span style={{
                                 color: p.status === "success" ? "var(--color-success)" : p.status === "pending" ? "var(--color-warning)" : "var(--color-error)"
                               }}>
-                                {p.status === "success" ? "✓ Done" : p.status === "pending" ? "⏳ Awaiting Approval" : "✗ Reverted"}
+                                {p.status === "success" ? "✓ Done" : p.status === "pending" ? "Awaiting Approval" : "✗ Reverted"}
                               </span>
                             </div>
                           </div>
@@ -453,7 +488,7 @@ Charlie (Copywriter),0x5c79743c39385fb93c0d8df3c9ee5ff27fbc32a1,95.50`;
                           onClick={() => approveBatch(batch.id)}
                           style={{ flex: 2 }}
                         >
-                          ✅ Checker Approve & Disburse
+                          Checker Approve & Disburse
                         </button>
                       </div>
                     )}

@@ -1,6 +1,5 @@
-"use client";
-
 import React from "react";
+import { BriefcaseIcon, BoltIcon, HourglassIcon, IdeaIcon } from "./icons/CustomIcons";
 
 export interface ContributingChain {
   chain: string;
@@ -16,16 +15,32 @@ interface UnifiedPortfolioCardProps {
 
 export function UnifiedPortfolioCard({ unifiedBalance, chains, walletType = "SCA" }: UnifiedPortfolioCardProps) {
   // Helper to format chain display name
-  const formatChainName = (name: string) => {
+  const formatChainName = (name: string): React.ReactNode => {
     switch (name) {
       case "Arc_Testnet":
-        return "⚡ Arc Testnet";
+        return (
+          <span style={{ display: "inline-flex", alignItems: "center" }}>
+            <BoltIcon size={14} className="text-[var(--color-primary)] mr-1" /> Arc Testnet
+          </span>
+        );
       case "Base_Sepolia":
-        return "🔵 Base Sepolia";
+        return (
+          <span style={{ display: "inline-flex", alignItems: "center" }}>
+            <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "rgb(59, 130, 246)", marginRight: "6px" }} /> Base Sepolia
+          </span>
+        );
       case "Ethereum_Sepolia":
-        return "💎 Ethereum Sepolia";
+        return (
+          <span style={{ display: "inline-flex", alignItems: "center" }}>
+            <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "rgb(139, 92, 246)", marginRight: "6px" }} /> Ethereum Sepolia
+          </span>
+        );
       case "Solana_Devnet":
-        return "☀️ Solana Devnet";
+        return (
+          <span style={{ display: "inline-flex", alignItems: "center" }}>
+            <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "rgb(20, 184, 166)", marginRight: "6px" }} /> Solana Devnet
+          </span>
+        );
       default:
         return name;
     }
@@ -47,7 +62,7 @@ export function UnifiedPortfolioCard({ unifiedBalance, chains, walletType = "SCA
     }
   };
 
-  // Calculated stablecoin exposure (simulate high fidelity USDC/EURC split based on address hash)
+  // Calculated stablecoin exposure split (USDC/EURC ratio calculation)
   const isSolana = chains.some(c => c.chain === "Solana_Devnet");
   const usdcExposure = unifiedBalance * 0.85;
   const eurcExposure = unifiedBalance * 0.15;
@@ -73,8 +88,8 @@ export function UnifiedPortfolioCard({ unifiedBalance, chains, walletType = "SCA
       {/* Card Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={{ fontSize: "1.25rem" }}>💼</span>
-          <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 800, letterSpacing: "-0.01em", fontFamily: "var(--font-round)" }}>
+          <BriefcaseIcon size={20} className="text-[var(--color-primary)]" />
+          <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 800, letterSpacing: "-0.01em", fontFamily: "var(--font-sans)" }}>
             Unified Stablecoin Portfolio
           </h4>
         </div>
@@ -192,12 +207,12 @@ export function UnifiedPortfolioCard({ unifiedBalance, chains, walletType = "SCA
         </span>
         <div style={{ display: "flex", gap: "12px" }}>
           <div style={{ flex: 1, background: "var(--color-bg-secondary)", padding: "8px", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
-            <span style={{ fontSize: "0.625rem", color: "var(--color-text-secondary)", display: "block" }}>🇺🇸 USDC Exposure</span>
+            <span style={{ fontSize: "0.625rem", color: "var(--color-text-secondary)", display: "block" }}>USDC Exposure</span>
             <strong style={{ fontSize: "0.875rem", color: "var(--color-text-primary)" }}>85.0%</strong>
             <span style={{ fontSize: "0.6875rem", color: "var(--color-text-secondary)", display: "block" }}>${usdcExposure.toFixed(2)}</span>
           </div>
           <div style={{ flex: 1, background: "var(--color-bg-secondary)", padding: "8px", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
-            <span style={{ fontSize: "0.625rem", color: "var(--color-text-secondary)", display: "block" }}>🇪🇺 EURC Exposure</span>
+            <span style={{ fontSize: "0.625rem", color: "var(--color-text-secondary)", display: "block" }}>EURC Exposure</span>
             <strong style={{ fontSize: "0.875rem", color: "var(--color-text-primary)" }}>15.0%</strong>
             <span style={{ fontSize: "0.6875rem", color: "var(--color-text-secondary)", display: "block" }}>${eurcExposure.toFixed(2)}</span>
           </div>
@@ -211,11 +226,15 @@ export function UnifiedPortfolioCard({ unifiedBalance, chains, walletType = "SCA
         </span>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--color-bg-secondary)", padding: "8px 12px", borderRadius: "8px" }}>
-            <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>📅 Active Days</span>
+            <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", display: "flex", alignItems: "center" }}>
+              <HourglassIcon size={12} className="text-[var(--color-text-secondary)] mr-1" /> Active Days
+            </span>
             <strong style={{ fontSize: "0.75rem", color: "var(--color-text-primary)" }}>14 Days</strong>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--color-bg-secondary)", padding: "8px 12px", borderRadius: "8px" }}>
-            <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>⚡ Velocity</span>
+            <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", display: "flex", alignItems: "center" }}>
+              <BoltIcon size={12} className="text-[var(--color-primary)] mr-1" /> Velocity
+            </span>
             <strong style={{ fontSize: "0.75rem", color: "var(--color-text-primary)" }}>12.4 tx/wk</strong>
           </div>
         </div>
@@ -230,11 +249,18 @@ export function UnifiedPortfolioCard({ unifiedBalance, chains, walletType = "SCA
           padding: "10px",
           fontSize: "0.725rem",
           color: "var(--color-text-secondary)",
-          lineHeight: 1.4
+          lineHeight: 1.4,
+          display: "flex",
+          alignItems: "flex-start",
+          gap: "6px"
         }}
       >
-        ℹ️ <strong>Auto-Routing Enabled</strong>: WireStable automatically routes payments through CCTP if your Arc balance is insufficient, pulling required funds from funding chains.
+        <IdeaIcon size={14} className="text-[var(--color-primary)] mt-0.5" />
+        <span>
+          <strong>Auto-Routing Enabled</strong>: WireStable automatically routes payments through CCTP if your Arc balance is insufficient, pulling required funds from funding chains.
+        </span>
       </div>
     </div>
   );
 }
+

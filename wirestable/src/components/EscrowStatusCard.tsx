@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { WarningIcon, HourglassIcon, LockIcon, HelpIcon } from "@/components/icons/CustomIcons";
 
 interface EscrowStatusCardProps {
   jobId: number;
@@ -187,7 +188,7 @@ export function EscrowStatusCard({
                 </label>
                 <input
                   type="text"
-                  placeholder="https://github.com/freelancer/my-project"
+                  placeholder="e.g. https://github.com/my-org/my-repo or https://figma.com/file/my-design"
                   value={submissionUrl}
                   onChange={(e) => setSubmissionUrl(e.target.value)}
                   disabled={isSubmitting}
@@ -202,6 +203,9 @@ export function EscrowStatusCard({
                     fontWeight: 600
                   }}
                 />
+                <p style={{ fontSize: "0.625rem", color: "var(--color-text-tertiary)", marginTop: "4px", marginBottom: 0, display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <HelpIcon size={12} /> Provide the hyperlink to your completed deliverable. The AI compliance agent checks the host filter to auto-release locked funds.
+                </p>
               </div>
 
               {error && <div style={{ fontSize: "0.75rem", color: "var(--color-error)", fontWeight: 600 }}>{error}</div>}
@@ -212,29 +216,29 @@ export function EscrowStatusCard({
                 disabled={isSubmitting || !submissionUrl}
                 style={{ width: "100%" }}
               >
-                {isSubmitting ? "Verifying..." : "📤 Submit & Trigger Auto-Release"}
+                {isSubmitting ? "Verifying..." : "Submit & Trigger Auto-Release"}
               </button>
             </form>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              <div style={{ fontSize: "0.75rem", color: "var(--color-text-tertiary)", textAlign: "center", padding: "10px 0" }}>
-                ⏳ Waiting for Freelancer submission...
+              <div style={{ fontSize: "0.75rem", color: "var(--color-text-tertiary)", textAlign: "center", padding: "10px 0", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                <HourglassIcon size={14} animate /> Waiting for Freelancer submission...
               </div>
               {isClient && (
                 <div style={{ display: "flex", gap: "8px" }}>
                   <button
                     className="btn btn-primary"
                     onClick={() => onRelease(jobId)}
-                    style={{ flex: 1, padding: "8px", fontSize: "0.75rem" }}
+                    style={{ flex: 1, padding: "8px", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
                   >
-                    🔓 Manual Release
+                    <LockIcon size={12} /> Manual Release
                   </button>
                   <button
                     className="btn"
                     onClick={() => onDispute(jobId)}
-                    style={{ flex: 1, padding: "8px", fontSize: "0.75rem", border: "1px solid rgba(239, 68, 68, 0.3)", color: "#ef4444" }}
+                    style={{ flex: 1, padding: "8px", fontSize: "0.75rem", border: "1px solid rgba(239, 68, 68, 0.3)", color: "#ef4444", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
                   >
-                    ⚠️ Dispute Job
+                    <WarningIcon size={12} /> Dispute Job
                   </button>
                 </div>
               )}
@@ -262,8 +266,8 @@ export function EscrowStatusCard({
 
       {status === "REJECTED" && (
         <div style={{ textAlign: "center", padding: "8px 0", background: "rgba(239, 68, 68, 0.1)", borderRadius: "var(--radius-sm)" }}>
-          <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "#ef4444" }}>
-            ⚠️ Agreement in Dispute. Treasury locked.
+          <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "#ef4444", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <WarningIcon size={14} /> Agreement in Dispute. Treasury locked.
           </span>
         </div>
       )}

@@ -4,13 +4,14 @@ import { Navbar } from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { DiscoveryEngine } from "@/components/DiscoveryEngine";
 import { Footer } from "@/components/Footer";
+import { HomeIcon } from "@/components/icons/CustomIcons";
 
 export default function PrivacyPage() {
   return (
     <div className="app-container" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       {/* Header */}
       <Navbar>
-        <a href="/" className="btn btn-secondary btn-sm" style={{ textDecoration: "none" }}>🏠 Landing Page</a>
+        <a href="/" className="btn btn-secondary btn-sm" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "6px" }}><HomeIcon size={12} className="text-[var(--color-primary)]" /> Landing Page</a>
       </Navbar>
       
       <main className="app-main w-full max-w-[800px] mx-auto px-4 py-6" style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)", flex: 1 }}>

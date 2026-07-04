@@ -8,27 +8,27 @@ export function CTASection() {
   
   // Decide CTA contents based on route
   let title = "Ready to experience gasless stablecoin payments?";
-  let subtitle = "Onboard with your email in seconds, run mock payments, or integrate our stablecoin remittance stack.";
-  let primaryLabel = "Launch Chat Remit ⚡";
+  let subtitle = "Onboard with your email in seconds, disburse stablecoin streams, or integrate our stablecoin remittance stack.";
+  let primaryLabel = "Launch Chat Remit";
   let primaryHref = "/chat";
-  let secondaryLabel = "Agent Studio Developer Portal 🧪";
+  let secondaryLabel = "Agent Studio Developer Portal";
   let secondaryHref = "/agent-studio";
 
   if (pathname.includes("/chat") || pathname.includes("/admin") || pathname.includes("/agent-studio")) {
     // Inside the app, prompt docs or contact support
     title = "Build your own Stablecoin Commerce workflows";
     subtitle = "Deploy custom Maker-Checker rules, monitor compliance APIs, or configure options hedging using our developer SDK.";
-    primaryLabel = "Developer Docs 📖";
+    primaryLabel = "Developer Docs";
     primaryHref = "/docs";
-    secondaryLabel = "Get Technical Support ✉️";
+    secondaryLabel = "Get Technical Support";
     secondaryHref = "/contact";
   } else if (pathname.includes("/privacy") || pathname.includes("/terms")) {
     // Legal page recovery paths
     title = "Have questions about compliance or key enclaves?";
     subtitle = "Read our security FAQ to learn how developer-controlled and user-controlled MPC smart contract wallets operate.";
-    primaryLabel = "Read Security FAQ 💡";
+    primaryLabel = "Read Security FAQ";
     primaryHref = "/faq";
-    secondaryLabel = "Contact Legal & Compliance ✉️";
+    secondaryLabel = "Contact Legal & Compliance";
     secondaryHref = "/contact";
   }
 

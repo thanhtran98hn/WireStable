@@ -1,6 +1,5 @@
-"use client";
-
 import React, { useState, useEffect, useRef } from "react";
+import { BoltIcon, WireStableLogo } from "./icons/CustomIcons";
 
 interface StreamCounterProps {
   streamId: number;
@@ -84,8 +83,8 @@ export function StreamCounter({
       className="card"
       style={{
         padding: "var(--space-5)",
-        background: "rgba(59, 130, 246, 0.03)",
-        border: "1px solid rgba(59, 130, 246, 0.15)",
+        background: "rgba(255, 107, 74, 0.02)",
+        border: "1.5px solid var(--color-primary)",
         borderRadius: "var(--radius-lg)",
         position: "relative",
         overflow: "hidden"
@@ -100,24 +99,29 @@ export function StreamCounter({
           width: "150px",
           height: "150px",
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(255,107,74,0.15) 0%, transparent 70%)",
           pointerEvents: "none"
         }}
       />
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "var(--space-4)" }}>
         <div>
-          <span className="bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">
+          <span className="bg-[var(--color-accent-bg)] text-[var(--color-primary)] text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">
             Active Stream #{streamId}
           </span>
           <h4 style={{ fontSize: "0.875rem", fontWeight: 700, marginTop: "var(--space-2)", color: "var(--color-text-primary)" }}>
             Continuous Salary Stream
           </h4>
         </div>
-        <div style={{ textAlign: "right" }}>
-          <span style={{ fontSize: "0.625rem", color: "var(--color-text-tertiary)", textTransform: "uppercase" }}>Flow Rate</span>
-          <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-secondary)" }}>
-            ~{(usdcRatePerSecond * 3600).toFixed(4)} USDC/hr
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <div style={{ background: "var(--color-primary)", borderRadius: "50%", padding: "6px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <WireStableLogo size={20} className="text-white" />
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <span style={{ fontSize: "0.625rem", color: "var(--color-text-tertiary)", textTransform: "uppercase" }}>Flow Rate</span>
+            <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-secondary)" }}>
+              ~{(usdcRatePerSecond * 3600).toFixed(4)} USDC/hr
+            </div>
           </div>
         </div>
       </div>
@@ -152,7 +156,7 @@ export function StreamCounter({
             style={{
               width: `${progressPercent}%`,
               height: "100%",
-              background: "linear-gradient(90deg, var(--color-primary) 0%, #60a5fa 100%)",
+              background: "linear-gradient(90deg, var(--color-primary) 0%, var(--color-accent-light) 100%)",
               borderRadius: "3px",
               transition: "width 0.5s ease"
             }}
@@ -180,10 +184,12 @@ export function StreamCounter({
         className="btn btn-primary"
         onClick={() => onWithdraw(streamId)}
         disabled={isWithdrawing || parseFloat(displayBalance) <= 0}
-        style={{ width: "100%" }}
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
       >
-        {isWithdrawing ? "Signing Withdrawal..." : "⚡ Withdraw Accrued Earnings"}
+        <BoltIcon size={16} className="text-white" />
+        {isWithdrawing ? "Signing Withdrawal..." : "Withdraw Accrued Earnings"}
       </button>
     </div>
   );
 }
+

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { BoltIcon, HourglassIcon } from "@/components/icons/CustomIcons";
 
 // ==========================================
 // 1. LoadingButton
@@ -443,8 +444,16 @@ export function LoadingProgress({
       {/* Transfer Metrics */}
       {!hasFailed && !isPaused && (speed || eta) && (
         <div className="flex justify-between text-[11px] text-[var(--color-text-tertiary)]">
-          {speed && <span>⚡ {speed}</span>}
-          {eta && <span>⏳ {eta} remaining</span>}
+          {speed && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "2px" }}>
+              <BoltIcon size={12} animate /> {speed}
+            </span>
+          )}
+          {eta && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "2px" }}>
+              <HourglassIcon size={12} animate /> {eta} remaining
+            </span>
+          )}
         </div>
       )}
     </div>

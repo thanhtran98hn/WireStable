@@ -5,6 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { RelatedContent } from "@/components/RelatedContent";
 import { CTASection } from "@/components/CTASection";
+import { HomeIcon, BoltIcon, ChatIcon, GithubIcon, TwitterIcon, WarningIcon, InfoIcon, MailIcon } from "@/components/icons/CustomIcons";
 
 export default function ContactPage() {
   const [name, setName] = useState("");
@@ -38,11 +39,11 @@ export default function ContactPage() {
     <div className="app-container">
       {/* Header */}
       <Navbar>
-        <a href="/" className="btn btn-secondary btn-sm" style={{ textDecoration: "none", fontSize: "11px", fontWeight: "bold" }}>
-          🏠 Landing Page
+        <a href="/" className="btn btn-secondary btn-sm" style={{ textDecoration: "none", fontSize: "11px", fontWeight: "bold", display: "flex", alignItems: "center", gap: "6px" }}>
+          <HomeIcon size={12} className="text-[var(--color-primary)]" /> Landing Page
         </a>
-        <a href="/chat" className="btn btn-primary btn-sm" style={{ textDecoration: "none", fontSize: "11px", fontWeight: "bold" }}>
-          Launch App ⚡
+        <a href="/chat" className="btn btn-primary btn-sm" style={{ textDecoration: "none", fontSize: "11px", fontWeight: "bold", display: "flex", alignItems: "center", gap: "6px" }}>
+          Launch App <BoltIcon size={12} />
         </a>
       </Navbar>
 
@@ -67,7 +68,7 @@ export default function ContactPage() {
             <h3 style={{ fontSize: "1.125rem" }}>Alternative Channels</h3>
             
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "1.25rem" }}>💬</span>
+              <ChatIcon size={20} className="text-[var(--color-primary)]" />
               <div>
                 <strong style={{ fontSize: "0.875rem", display: "block" }}>Telegram Support</strong>
                 <a href="https://t.me" target="_blank" rel="noreferrer" style={{ fontSize: "0.8125rem", color: "var(--color-primary)", textDecoration: "none" }}>t.me/wirestable_remit</a>
@@ -75,7 +76,7 @@ export default function ContactPage() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "1.25rem" }}>🐙</span>
+              <GithubIcon size={20} className="text-[var(--color-primary)]" />
               <div>
                 <strong style={{ fontSize: "0.875rem", display: "block" }}>GitHub Repository</strong>
                 <a href="https://github.com" target="_blank" rel="noreferrer" style={{ fontSize: "0.8125rem", color: "var(--color-primary)", textDecoration: "none" }}>github.com/wirestable/remittance-stack</a>
@@ -83,7 +84,7 @@ export default function ContactPage() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "1.25rem" }}>🐦</span>
+              <TwitterIcon size={20} className="text-[var(--color-primary)]" />
               <div>
                 <strong style={{ fontSize: "0.875rem", display: "block" }}>X / Twitter</strong>
                 <a href="https://x.com" target="_blank" rel="noreferrer" style={{ fontSize: "0.8125rem", color: "var(--color-primary)", textDecoration: "none" }}>@WireStable</a>
@@ -103,8 +104,8 @@ export default function ContactPage() {
           )}
 
           {error && (
-            <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgb(239,68,68)", color: "rgb(239,68,68)", padding: "12px", borderRadius: "8px", fontSize: "0.875rem", marginBottom: "16px" }}>
-              ⚠ {error}
+            <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgb(239,68,68)", color: "rgb(239,68,68)", padding: "12px", borderRadius: "8px", fontSize: "0.875rem", marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <WarningIcon size={14} className="text-[var(--color-error)]" /> {error}
             </div>
           )}
 
@@ -115,9 +116,12 @@ export default function ContactPage() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your name"
+                placeholder="e.g. Alice Smith"
                 style={{ width: "100%", padding: "10px", background: "var(--color-bg-secondary)", border: "1px solid var(--color-border)", borderRadius: "6px", color: "var(--color-text-primary)", fontSize: "0.875rem" }}
               />
+              <p style={{ fontSize: "0.6875rem", color: "var(--color-text-tertiary)", marginTop: "4px", marginBottom: 0, display: "flex", alignItems: "center", gap: "4px" }}>
+                <InfoIcon size={12} className="text-[var(--color-primary)]" /> Enter your full name or company's primary contact representative.
+              </p>
             </div>
 
             <div>
@@ -126,9 +130,12 @@ export default function ContactPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
+                placeholder="e.g. alice@company.com"
                 style={{ width: "100%", padding: "10px", background: "var(--color-bg-secondary)", border: "1px solid var(--color-border)", borderRadius: "6px", color: "var(--color-text-primary)", fontSize: "0.875rem" }}
               />
+              <p style={{ fontSize: "0.6875rem", color: "var(--color-text-tertiary)", marginTop: "4px", marginBottom: 0, display: "flex", alignItems: "center", gap: "4px" }}>
+                <InfoIcon size={12} className="text-[var(--color-primary)]" /> Provide a valid business email for communications and response ticketing.
+              </p>
             </div>
 
             <div>
@@ -143,6 +150,9 @@ export default function ContactPage() {
                 <option value="bug">Report a bug</option>
                 <option value="custom">Custom integration</option>
               </select>
+              <p style={{ fontSize: "0.6875rem", color: "var(--color-text-tertiary)", marginTop: "4px", marginBottom: 0, display: "flex", alignItems: "center", gap: "4px" }}>
+                <InfoIcon size={12} className="text-[var(--color-primary)]" /> Select a primary inquiry category to help route your message efficiently.
+              </p>
             </div>
 
             <div>
@@ -151,13 +161,16 @@ export default function ContactPage() {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 rows={4}
-                placeholder="How can we help you?"
+                placeholder="e.g. We are interested in integrating the ERC-8183 escrow module for our B2B marketplace..."
                 style={{ width: "100%", padding: "10px", background: "var(--color-bg-secondary)", border: "1px solid var(--color-border)", borderRadius: "6px", color: "var(--color-text-primary)", fontSize: "0.875rem", resize: "none" }}
               />
+              <p style={{ fontSize: "0.6875rem", color: "var(--color-text-tertiary)", marginTop: "4px", marginBottom: 0, display: "flex", alignItems: "center", gap: "4px" }}>
+                <InfoIcon size={12} className="text-[var(--color-primary)]" /> Details regarding your request. Minimum 10 characters required.
+              </p>
             </div>
 
-            <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ width: "100%", justifyContent: "center", padding: "12px", fontWeight: "bold" }}>
-              {isSubmitting ? "Sending..." : "Submit Inquiry ✉️"}
+            <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ width: "100%", justifyContent: "center", padding: "12px", fontWeight: "bold", display: "flex", alignItems: "center", gap: "6px" }}>
+              {isSubmitting ? "Sending..." : <>Submit Inquiry <MailIcon size={14} /></>}
             </button>
           </form>
         </div>

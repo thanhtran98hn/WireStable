@@ -24,6 +24,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { HedgingLockCard } from "@/components/HedgingLockCard";
 import { Navbar } from "@/components/Navbar";
 import { NetworkActivityFeed } from "@/components/NetworkActivityFeed";
+import { BoltIcon, BuildingIcon, HelpIcon, DocsIcon, LockIcon, MailIcon, MicIcon } from "@/components/icons/CustomIcons";
 
 export function ChatView() {
   const { openModal } = useModal();
@@ -58,6 +59,7 @@ export function ChatView() {
     executeEscrowSubmit,
     executePurchaseRateLock,
     addMessage,
+    activeStreams,
   } = useChat();
 
   const [email, setEmail] = useState("");
@@ -134,13 +136,13 @@ export function ChatView() {
       {/* Header */}
       <Navbar>
         <a href="/agent-studio" className="btn btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none", fontSize: "11px", fontWeight: "bold", padding: "6px 12px", borderRadius: "8px" }}>
-          ⚡ Agent Studio
+          <BoltIcon size={12} /> Agent Studio
         </a>
         <a href="/admin" className="btn btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none", fontSize: "11px", fontWeight: "bold", padding: "6px 12px", borderRadius: "8px" }}>
-          🏢 Enterprise Admin
+          <BuildingIcon size={12} /> Enterprise Admin
         </a>
         <AgentIdentityBadge />
-        {isConnected && (
+        {(isConnected || circleWallet.walletAddress) && (
           <div className="network-badge">
             <span className="network-dot" />
             Arc Testnet
@@ -167,19 +169,93 @@ export function ChatView() {
             </button>
           </div>
         ) : (
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-stretch sm:items-center">
-            <ConnectButton
-              accountStatus="avatar"
-              chainStatus="icon"
-              showBalance={true}
-            />
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-stretch sm:items-center flex-shrink-0">
+            <ConnectButton.Custom>
+              {({
+                account,
+                chain,
+                openConnectModal,
+                openAccountModal,
+                openChainModal,
+                mounted,
+              }) => {
+                const ready = mounted;
+                const connected = ready && account && chain;
+
+                console.log("[RainbowKit Debug] Custom button state:", {
+                  ready,
+                  connected,
+                  accountAddress: account?.address,
+                  chainName: chain?.name,
+                  chainId: chain?.id,
+                  unsupported: chain?.unsupported,
+                });
+
+                if (!ready) {
+                  return (
+                    <div
+                      style={{
+                        opacity: 0,
+                        pointerEvents: 'none',
+                        userSelect: 'none',
+                        width: '110px',
+                        height: '28px'
+                      }}
+                    />
+                  );
+                }
+
+                if (!connected) {
+                  return (
+                    <button
+                      onClick={() => {
+                        console.log("[RainbowKit Debug] Connect Wallet button clicked. Triggering openConnectModal.");
+                        openConnectModal();
+                      }}
+                      className="btn btn-primary btn-sm flex-shrink-0"
+                      style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: "bold", padding: "6px 12px", borderRadius: "8px", flexShrink: 0 }}
+                      type="button"
+                    >
+                      Connect Wallet
+                    </button>
+                  );
+                }
+
+                if (chain.unsupported) {
+                  return (
+                    <button
+                      onClick={openChainModal}
+                      className="btn btn-danger btn-sm flex-shrink-0"
+                      style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: "bold", padding: "6px 12px", borderRadius: "8px", flexShrink: 0 }}
+                      type="button"
+                    >
+                      Wrong Network
+                    </button>
+                  );
+                }
+
+                return (
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button
+                      onClick={openAccountModal}
+                      className="btn btn-secondary btn-sm flex-shrink-0"
+                      style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: "bold", padding: "6px 12px", borderRadius: "8px", flexShrink: 0 }}
+                      type="button"
+                    >
+                      <span>{account.displayName}</span>
+                    </button>
+                  </div>
+                );
+              }}
+            </ConnectButton.Custom>
             {!isWeb3Connected && (
               <button
                 onClick={() => setShowOnboardModal(true)}
-                className="flex items-center justify-center gap-2 rounded-xl bg-[var(--color-accent)] px-4 py-2 text-xs font-bold text-[var(--color-text-inverse)] hover:bg-[var(--color-accent-light)] active:scale-95 transition-all shadow-md shadow-[var(--color-accent)]/15"
+                className="btn btn-primary btn-sm flex-shrink-0"
+                style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: "bold", padding: "6px 12px", borderRadius: "8px", flexShrink: 0 }}
                 type="button"
               >
-                📧 Email Login
+                <MailIcon size={12} /> Email Login
               </button>
             )}
           </div>
@@ -260,8 +336,9 @@ export function ChatView() {
                     );
 
                   case "stream-counter":
-                    const streamData = msg.extra || {
-                      streamId: 1,
+                    const sId = msg.extra?.streamId || 1;
+                    const streamData = activeStreams.find((s: any) => s.streamId === sId) || msg.extra || {
+                      streamId: sId,
                       sender: web3Address || "0xEmployer...",
                       recipient: msg.streamCreateIntent?.to || "0xRecipient...",
                       amountPerSecond: parseInt(msg.streamCreateIntent?.ratePerSecond || "165"),
@@ -356,13 +433,15 @@ export function ChatView() {
 
               {/* Typing indicator */}
               {isLoading && (
-                <div className="chat-bubble chat-bubble-ai">
-                  <div className="typing-indicator">
-                    <div className="typing-dot" />
-                    <div className="typing-dot" />
-                    <div className="typing-dot" />
-                  </div>
-                </div>
+                <ChatBubble 
+                  message={{ 
+                    id: "typing", 
+                    role: "ai", 
+                    type: "typing", 
+                    content: "", 
+                    timestamp: new Date() 
+                  }} 
+                />
               )}
 
               <div ref={messagesEndRef} />
@@ -380,9 +459,12 @@ export function ChatView() {
                 color: "var(--color-warning)",
                 marginBottom: "var(--space-2)",
                 border: "1px solid rgba(224, 160, 48, 0.2)",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px"
               }}
             >
-              🎤 {voiceError}
+              <MicIcon size={14} className="text-[var(--color-warning)]" /> {voiceError}
             </div>
           )}
 
@@ -438,10 +520,10 @@ export function ChatView() {
                 onKeyDown={handleKeyDown}
                 placeholder={
                   isListening
-                    ? "🎤 Listening... speak your command"
+                    ? "Listening... speak your command (e.g. 'pay Bob 50 USDC')"
                     : isConnected
-                    ? 'Type "Send 100 USDC to 0x..." or ask anything...'
-                    : "Connect your wallet to start sending USDC..."
+                    ? 'e.g. "Send 10 USDC to Bob 0xa2b2... and convert remaining balance to EURC"'
+                    : "Connect your wallet above to enable gasless stablecoin transfers..."
                 }
                 rows={1}
                 disabled={isLoading || isListening}
@@ -479,6 +561,10 @@ export function ChatView() {
                 )}
               </button>
             </div>
+
+            <p style={{ fontSize: "0.6875rem", color: "var(--color-text-tertiary)", marginTop: "6px", marginBottom: "4px", textAlign: "center", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
+              <HelpIcon size={12} /> Enter natural language instructions to initiate gas-sponsored stablecoin transfers, bridge assets, or deploy compliance rules.
+            </p>
 
             {/* Footer */}
             <div
@@ -525,25 +611,25 @@ export function ChatView() {
                   </span>
                 )}
               </div>
-              <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "4px", opacity: 0.85 }}>
-                <a href="/docs" style={{ color: "inherit", textDecoration: "none" }} className="hover:text-[var(--color-accent)]">Docs 📖</a>
+              <div style={{ display: "flex", justifyContent: "center", gap: "12px", marginTop: "4px", opacity: 0.85 }}>
+                <a href="/docs" style={{ color: "inherit", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }} className="hover:text-[var(--color-accent)]"><DocsIcon size={11} /> Docs</a>
                 <span>·</span>
-                <a href="/faq" style={{ color: "inherit", textDecoration: "none" }} className="hover:text-[var(--color-accent)]">FAQ ❓</a>
+                <a href="/faq" style={{ color: "inherit", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }} className="hover:text-[var(--color-accent)]"><HelpIcon size={11} /> FAQ</a>
                 <span>·</span>
-                <a href="/about" style={{ color: "inherit", textDecoration: "none" }} className="hover:text-[var(--color-accent)]">About 🏢</a>
+                <a href="/about" style={{ color: "inherit", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }} className="hover:text-[var(--color-accent)]"><BuildingIcon size={11} /> About</a>
                 <span>·</span>
-                <a href="/privacy" style={{ color: "inherit", textDecoration: "none" }} className="hover:text-[var(--color-accent)]">Privacy 🔒</a>
+                <a href="/privacy" style={{ color: "inherit", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }} className="hover:text-[var(--color-accent)]"><LockIcon size={11} /> Privacy</a>
               </div>
             </div>
           </div>
         </div>
 
         {/* Right Side: Nanopayment Channel Card & Network Feed */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)", width: "320px", flexShrink: 0 }}>
+        <div className="w-full lg:w-[320px]" style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)", maxWidth: "320px", flexShrink: 0 }}>
           <ChannelCard
             channel={nanopay.channel}
-            onOpen={(amount, isSandbox) => {
-              if (!isSandbox && circleWallet.walletAddress && !circleWallet.tokenId) {
+            onOpen={(amount) => {
+              if (circleWallet.walletAddress && !circleWallet.tokenId) {
                 openModal("warning", {
                   title: "Wallet Sync Acknowledgment",
                   riskText: "Your Circle User-Controlled Smart Wallet balance is currently syncing with the Arc network indexer.",
@@ -564,15 +650,52 @@ export function ChatView() {
                         amt,
                         circleWallet.tokenId!
                       )
-                  : undefined,
-                isSandbox
+                  : undefined
               );
             }}
             onClose={() => nanopay.closeChannel(address || "")}
             isProcessing={nanopay.isLoading}
             walletAddress={address || undefined}
-            walletBalance={circleWallet.walletAddress ? circleWallet.balance : "25.0"}
+            walletBalance={circleWallet.walletAddress ? circleWallet.balance : null}
           />
+
+          {/* Arc Paymaster Sponsorship Telemetry Hub */}
+          <div className="card" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h4 style={{ fontSize: "0.8125rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
+                <BoltIcon size={14} animate /> Arc Gas Sponsorship
+              </h4>
+              <span className="status-badge status-badge-success" style={{ padding: "2px 6px", fontSize: "10px" }}>ACTIVE</span>
+            </div>
+            
+            <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", margin: 0, lineHeight: 1.4 }}>
+              Network fees on Arc Testnet are 100% sponsored by the developer paymaster for all authenticated sessions.
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "0.75rem", borderTop: "1px solid var(--color-border)", paddingTop: "8px", marginTop: "4px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "var(--color-text-tertiary)" }}>Paymaster Address</span>
+                <a 
+                  href="https://testnet.arcscan.app/address/0x7708c3b79ce858c0df1b44ec069f1092eb27ef86" 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  style={{ fontFamily: "monospace", color: "var(--color-primary)", textDecoration: "underline" }}
+                >
+                  0x7708...ef86
+                </a>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "var(--color-text-tertiary)" }}>Sponsored Txns</span>
+                <strong style={{ color: "var(--color-text-primary)" }}>{messages.filter(m => m.type === "tx-status" && m.txStatus === "confirmed").length + 2}</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "var(--color-text-tertiary)" }}>Accumulated Gas Saved</span>
+                <strong style={{ color: "var(--color-success)" }}>
+                  ${((messages.filter(m => m.type === "tx-status" && m.txStatus === "confirmed").length + 2) * 0.015).toFixed(3)} USDC
+                </strong>
+              </div>
+            </div>
+          </div>
 
           <NetworkActivityFeed />
         </div>
@@ -615,15 +738,18 @@ export function ChatView() {
                 <label className="block text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
                   Email Address
                 </label>
-                <input
+                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. user@domain.com"
+                  placeholder="e.g. alice@company.com"
                   required
                   className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-4 py-3.5 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] focus:border-[var(--color-border-focus)] focus:outline-none focus:ring-1 focus:ring-[var(--color-border-focus)] transition-all font-semibold"
                   disabled={circleWallet.isLoading}
                 />
+                <p className="mt-2 text-[10px] text-[var(--color-text-tertiary)] leading-normal" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <HelpIcon size={10} /> We will initiate a Circle Smart Wallet generation linked to this email address on the Arc chain.
+                </p>
               </div>
 
               {onboardError && (

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { ShieldIcon } from "@/components/icons/CustomIcons";
 
 interface HedgingLockCardProps {
   amount: number;
@@ -58,7 +59,7 @@ export function HedgingLockCard({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontSize: "1.125rem" }}>🛡️</span>
+            <ShieldIcon size={20} className="text-[var(--color-success)]" />
             <h4 style={{ margin: 0, fontWeight: 700, fontSize: "0.9375rem" }}>FX Hedging Rate Lock</h4>
           </div>
           <span style={{ fontSize: "0.6875rem", color: "var(--color-text-tertiary)" }}>

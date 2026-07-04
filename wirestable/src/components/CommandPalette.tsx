@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Command } from "cmdk";
+import { SyncIcon, BoltIcon, WaveIcon, BriefcaseIcon } from "@/components/icons/CustomIcons";
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -56,49 +57,49 @@ export function CommandPalette({ isOpen, onClose, onExecuteCommand }: CommandPal
   const items = [
     {
       category: "Swap Assets",
-      icon: "🔄",
+      icon: <SyncIcon size={16} />,
       name: "/swap 10 USDC EURC",
       description: "Convert 10 USDC to EURC using StableFX rates",
       value: "/swap 10 USDC EURC"
     },
     {
       category: "Swap Assets",
-      icon: "🔄",
+      icon: <SyncIcon size={16} />,
       name: "/swap 50 EURC USDC",
       description: "Convert 50 EURC to USDC using StableFX rates",
       value: "/swap 50 EURC USDC"
     },
     {
       category: "Send Funds",
-      icon: "💸",
+      icon: <BoltIcon size={16} />,
       name: "/send 150 to Alice",
       description: "Transfer 150 USDC to Alice (0xa2b2...)",
       value: "/send 150 to 0xa2b22b2b22b2b2b22b2b2b22b2b2b22b2b2b2b"
     },
     {
       category: "Send Funds",
-      icon: "💸",
+      icon: <BoltIcon size={16} />,
       name: "/send 25 to Bob",
       description: "Transfer 25 USDC to Bob (0x7397...)",
       value: "/send 25 to 0x73977c088ddf7324317f2ccb2b2b1a134c6dbca8"
     },
     {
       category: "Bridge Portfolios",
-      icon: "🌉",
+      icon: <WaveIcon size={16} />,
       name: "/bridge 100 from Base",
       description: "Bridge 100 USDC from Base Sepolia to Arc",
       value: "/bridge 100 from Base"
     },
     {
       category: "Bridge Portfolios",
-      icon: "🌉",
+      icon: <WaveIcon size={16} />,
       name: "/bridge 50 from Arbitrum",
       description: "Bridge 50 USDC from Arbitrum Sepolia to Arc",
       value: "/bridge 50 from Arbitrum"
     },
     {
       category: "Account & Balances",
-      icon: "💼",
+      icon: <BriefcaseIcon size={16} />,
       name: "/balance",
       description: "Check unified multi-chain balances and portfolio",
       value: "/balance"
@@ -110,7 +111,7 @@ export function CommandPalette({ isOpen, onClose, onExecuteCommand }: CommandPal
       <div className="command-palette-container" onClick={(e) => e.stopPropagation()}>
         <Command label="Spotlight Search">
           <div className="command-palette-search">
-            <span style={{ fontSize: "1.125rem" }}>🔍</span>
+            <span style={{ fontSize: "0.8125rem", color: "var(--color-text-tertiary)", fontWeight: "bold", textTransform: "uppercase", marginRight: "4px" }}>Search</span>
             <Command.Input
               className="command-palette-input"
               placeholder="Type a Raycast command (e.g. /swap 10 USDC EURC)..."

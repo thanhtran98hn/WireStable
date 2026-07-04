@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ChatIcon, BoltIcon, BuildingIcon, DocsIcon } from "@/components/icons/CustomIcons";
 
 export function BottomNav() {
   const pathname = usePathname() || "";
@@ -9,10 +10,10 @@ export function BottomNav() {
   // Hide bottom navigation bar on landing page and legal documents if they don't want app distractions
   // but keep it on main dashboard, studio and chat apps for speed.
   const links = [
-    { label: "Chat", href: "/chat", icon: "💬" },
-    { label: "Studio", href: "/agent-studio", icon: "⚡" },
-    { label: "Admin", href: "/admin", icon: "🏢" },
-    { label: "Docs", href: "/docs", icon: "📖" },
+    { label: "Chat", href: "/chat", icon: <ChatIcon size={20} /> },
+    { label: "Studio", href: "/agent-studio", icon: <BoltIcon size={20} /> },
+    { label: "Admin", href: "/admin", icon: <BuildingIcon size={20} /> },
+    { label: "Docs", href: "/docs", icon: <DocsIcon size={20} /> },
   ];
 
   return (

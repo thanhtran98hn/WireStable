@@ -1,6 +1,5 @@
-"use client";
-
 import React, { useState } from "react";
+import { WaveIcon, IdeaIcon } from "./icons/CustomIcons";
 
 export function LPAnalytics() {
   const [depositAmount, setDepositAmount] = useState("");
@@ -37,7 +36,7 @@ export function LPAnalytics() {
     <div className="card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "20px" }}>
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-          <span style={{ fontSize: "1.25rem" }}>🌊</span>
+          <WaveIcon size={20} className="text-cyan-400" animate />
           <h3 style={{ fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>FX Hedging reserves & Maker Routing</h3>
         </div>
         <p style={{ fontSize: "0.8125rem", color: "var(--color-text-secondary)", lineHeight: 1.5 }}>
@@ -116,7 +115,7 @@ export function LPAnalytics() {
           <div style={{ display: "flex", gap: "6px" }}>
             <input
               type="number"
-              placeholder="Amount"
+              placeholder="e.g. 500"
               value={depositAmount}
               onChange={(e) => setDepositAmount(e.target.value)}
               style={{
@@ -137,6 +136,9 @@ export function LPAnalytics() {
               {isProcessing ? "..." : "Deposit"}
             </button>
           </div>
+          <p style={{ fontSize: "0.625rem", color: "var(--color-text-tertiary)", marginTop: "4px", marginBottom: 0, display: "flex", alignItems: "center", gap: "4px" }}>
+            <IdeaIcon size={12} className="text-[var(--color-primary)]" /> Fund the AMM liquidity pool to earn yield from FX option premiums.
+          </p>
         </div>
 
         <div>
@@ -144,7 +146,7 @@ export function LPAnalytics() {
           <div style={{ display: "flex", gap: "6px" }}>
             <input
               type="number"
-              placeholder="Amount"
+              placeholder="e.g. 200"
               value={withdrawAmount}
               onChange={(e) => setWithdrawAmount(e.target.value)}
               style={{
@@ -165,8 +167,12 @@ export function LPAnalytics() {
               {isProcessing ? "..." : "Withdraw"}
             </button>
           </div>
+          <p style={{ fontSize: "0.625rem", color: "var(--color-text-tertiary)", marginTop: "4px", marginBottom: 0, display: "flex", alignItems: "center", gap: "4px" }}>
+            <IdeaIcon size={12} className="text-[var(--color-primary)]" /> Withdraw your deposited reserves and accumulated pool rewards.
+          </p>
         </div>
       </div>
     </div>
   );
 }
+

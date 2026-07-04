@@ -183,7 +183,7 @@ export function SarPdfReport({
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>Regulatory Body Jurisdiction</Text>
-            <Text style={styles.value}>UAE Financial Intelligence Unit (FIU) Sandbox</Text>
+            <Text style={styles.value}>UAE Financial Intelligence Unit (FIU)</Text>
           </View>
         </View>
 
@@ -244,7 +244,7 @@ export function SarPdfReport({
             CONFIDENTIAL REGULATORY DOCUMENT - FOR LAW ENFORCEMENT & COMPLIANCE AUDITING PURPOSES ONLY
           </Text>
           <Text style={styles.footerText}>
-            Exported by WireStable Compliance Agent. All PII is cryptographically masked inside sandbox environments. Do not redistribute.
+            Exported by WireStable Compliance Agent. All PII is cryptographically masked. Do not redistribute.
           </Text>
         </View>
       </Page>

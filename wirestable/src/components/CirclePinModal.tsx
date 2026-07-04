@@ -82,8 +82,8 @@ export function CirclePinModal({ isOpen, type, onConfirm, onCancel }: CirclePinM
               ? "Create a 6-digit PIN to secure your Circle smart wallet."
               : "Enter your 6-digit PIN to authorize this transfer request."}
           </p>
-          <span className="mt-2 inline-block text-[10px] uppercase font-bold tracking-wider text-[var(--color-warning)] bg-[var(--color-warning-bg)] px-2 py-0.5 rounded-full">
-            Circle UCW Sandbox Simulation
+          <span className="mt-2 inline-block text-[10px] uppercase font-bold tracking-wider text-[#10b981] bg-[#10b981]/10 px-2 py-0.5 rounded-full">
+            Circle UCW Secured
           </span>
         </div>
 

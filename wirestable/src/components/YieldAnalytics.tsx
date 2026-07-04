@@ -1,6 +1,5 @@
-"use client";
-
 import React, { useState } from "react";
+import { BriefcaseIcon, WarningIcon } from "./icons/CustomIcons";
 
 interface YieldAnalyticsProps {
   autoSweep: boolean;
@@ -44,7 +43,7 @@ export function YieldAnalytics({
       <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-            <span style={{ fontSize: "1.25rem" }}>💼</span>
+            <BriefcaseIcon size={20} className="text-[var(--color-primary)]" />
             <h3 style={{ fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>Treasury Cash Sweep</h3>
           </div>
           <p style={{ fontSize: "0.8125rem", color: "var(--color-text-secondary)", lineHeight: 1.5, marginBottom: "16px" }}>
@@ -99,8 +98,9 @@ export function YieldAnalytics({
           </div>
         </div>
 
-        <div style={{ fontSize: "0.75rem", color: "var(--color-text-tertiary)", marginTop: "12px" }}>
-          ⚠️ Payout fallback is active: USYC will be automatically redeemed back to USDC if liquid balance is insufficient for disbursals.
+        <div style={{ fontSize: "0.75rem", color: "var(--color-text-tertiary)", marginTop: "12px", display: "flex", alignItems: "flex-start", gap: "4px" }}>
+          <WarningIcon size={12} className="text-[var(--color-warning)] mt-0.5" />
+          <span>Automated Liquidity Management: USYC will be automatically redeemed back to USDC if liquid balance is insufficient for disbursals.</span>
         </div>
       </div>
 
@@ -162,3 +162,4 @@ export function YieldAnalytics({
     </div>
   );
 }
+

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { BoltIcon } from "@/components/icons/CustomIcons";
 
 interface NetworkEvent {
   id: string;
@@ -186,8 +187,8 @@ export function NetworkActivityFeed() {
             </div>
 
             {event.gasSponsored && (
-              <div style={{ fontSize: "0.6rem", color: "var(--color-success)", textAlign: "right" }}>
-                ⚡ Gas Sponsored: {event.gasSponsored}
+              <div style={{ fontSize: "0.6rem", color: "var(--color-success)", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "2px" }}>
+                <BoltIcon size={10} animate /> Gas Sponsored: {event.gasSponsored}
               </div>
             )}
           </div>

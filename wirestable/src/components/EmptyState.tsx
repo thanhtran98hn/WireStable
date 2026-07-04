@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { BoltIcon, ChatIcon, SearchIcon, SyncIcon, MicIcon, LinkIcon, WireStableLogo } from "./icons/CustomIcons";
 
 interface EmptyStateProps {
   onSuggestionClick: (suggestion: string) => void;
@@ -26,13 +27,15 @@ export function EmptyState({ onSuggestionClick, address }: EmptyStateProps) {
         })
         .catch((err) => console.error("Error loading onboarding balance summary:", err));
     } else {
-      setUnifiedBal(25.00); // Seed onboarding sandbox balance
+      setUnifiedBal(0.00);
     }
   }, [address]);
 
   return (
     <div className="empty-state">
-      <div className="empty-state-icon">💸</div>
+      <div className="empty-state-icon animate-float" style={{ background: "var(--color-primary)", borderRadius: "50%", padding: "16px", display: "inline-flex", alignItems: "center", justifyContent: "center", width: "72px", height: "72px", marginBottom: "8px" }}>
+        <WireStableLogo size={38} className="text-white" />
+      </div>
       <h2 className="empty-state-title">Welcome to WireStable</h2>
       
       {unifiedBal !== null && (
@@ -50,14 +53,14 @@ export function EmptyState({ onSuggestionClick, address }: EmptyStateProps) {
             alignItems: "center"
           }}
         >
-          <span style={{ fontSize: "0.725rem", color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>
-            {address ? "🔗 Circle Gateway Connected" : "🧪 Circle Gateway (Sandbox Demo)"}
+          <span style={{ fontSize: "0.725rem", color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, display: "flex", alignItems: "center", gap: "4px" }}>
+            <LinkIcon size={12} className="text-[var(--color-primary)]" /> {address ? "Circle Gateway Connected" : "Circle Gateway"}
           </span>
           <strong style={{ fontSize: "1.1rem", color: "var(--color-text-primary)", marginTop: "4px" }}>
             Unified Portfolio: {unifiedBal.toFixed(2)} USDC
           </strong>
           <span style={{ fontSize: "0.6875rem", color: "var(--color-text-secondary)", marginTop: "2px" }}>
-            {address ? "Funds pooled globally across Sepolia, Base, and Solana Devnet" : "Showing simulated multi-chain pool balance across testnets"}
+            {address ? "Funds pooled globally across Sepolia, Base, and Solana Devnet" : "Connect your wallet to pool funds globally across chains"}
           </span>
         </div>
       )}
@@ -78,10 +81,10 @@ export function EmptyState({ onSuggestionClick, address }: EmptyStateProps) {
           marginTop: "var(--space-4)",
         }}
       >
-        <FeatureChip icon="💬" label="Chat to Pay" desc="Type or speak to send USDC" />
-        <FeatureChip icon="🔍" label="Error Explainer" desc="Ask about any tx error" />
-        <FeatureChip icon="📡" label="Live Tracking" desc="Real-time tx updates" />
-        <FeatureChip icon="🎤" label="Voice Transfer" desc="Speak your command" />
+        <FeatureChip icon={<ChatIcon size={18} />} label="Chat to Pay" desc="Type or speak to send USDC" />
+        <FeatureChip icon={<SearchIcon size={18} />} label="Error Explainer" desc="Ask about any tx error" />
+        <FeatureChip icon={<SyncIcon size={18} animate />} label="Live Tracking" desc="Real-time tx updates" />
+        <FeatureChip icon={<MicIcon size={18} />} label="Voice Transfer" desc="Speak your command" />
       </div>
 
       {/* Quick suggestions */}
@@ -102,7 +105,7 @@ export function EmptyState({ onSuggestionClick, address }: EmptyStateProps) {
           {SUGGESTIONS.map((s) => (
             <button
               key={s}
-              className="suggestion-chip"
+              className="suggestion-chip hover-lift active-press"
               onClick={() => onSuggestionClick(s)}
               id={`suggestion-${s.slice(0, 10).replace(/\s/g, "-").toLowerCase()}`}
             >
@@ -120,13 +123,13 @@ function FeatureChip({
   label,
   desc,
 }: {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   desc: string;
 }) {
   return (
     <div className="feature-chip">
-      <span style={{ fontSize: "1.25rem", flexShrink: 0 }}>{icon}</span>
+      <span style={{ display: "inline-flex", flexShrink: 0 }}>{icon}</span>
       <div>
         <div
           style={{
@@ -150,3 +153,4 @@ function FeatureChip({
     </div>
   );
 }
+

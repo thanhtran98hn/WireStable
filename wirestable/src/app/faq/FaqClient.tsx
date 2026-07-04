@@ -5,6 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { RelatedContent } from "@/components/RelatedContent";
 import { CTASection } from "@/components/CTASection";
+import { HomeIcon, BoltIcon, InfoIcon } from "@/components/icons/CustomIcons";
 
 interface FAQItem {
   question: string;
@@ -73,11 +74,11 @@ export default function FAQPage() {
     <div className="app-container">
       {/* Header */}
       <Navbar>
-        <a href="/" className="btn btn-secondary btn-sm" style={{ textDecoration: "none", fontSize: "11px", fontWeight: "bold" }}>
-          🏠 Landing Page
+        <a href="/" className="btn btn-secondary btn-sm" style={{ textDecoration: "none", fontSize: "11px", fontWeight: "bold", display: "flex", alignItems: "center", gap: "6px" }}>
+          <HomeIcon size={12} className="text-[var(--color-primary)]" /> Landing Page
         </a>
-        <a href="/chat" className="btn btn-primary btn-sm" style={{ textDecoration: "none", fontSize: "11px", fontWeight: "bold" }}>
-          Launch App ⚡
+        <a href="/chat" className="btn btn-primary btn-sm" style={{ textDecoration: "none", fontSize: "11px", fontWeight: "bold", display: "flex", alignItems: "center", gap: "6px" }}>
+          Launch App <BoltIcon size={12} />
         </a>
       </Navbar>
 
@@ -97,7 +98,7 @@ export default function FAQPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search questions (e.g. security, gas, circle)"
+            placeholder="e.g. 'How does paymaster sponsorship work?' or 'What is compliance scoring?'"
             style={{
               width: "100%",
               background: "var(--color-bg-secondary)",
@@ -109,6 +110,9 @@ export default function FAQPage() {
               marginTop: "8px"
             }}
           />
+          <p style={{ fontSize: "0.6875rem", color: "var(--color-text-tertiary)", marginTop: "6px", marginBottom: 0, display: "flex", alignItems: "center", gap: "4px" }}>
+            <InfoIcon size={12} className="text-[var(--color-primary)]" /> Type keywords to instantly filter the FAQ database for security, smart wallets, gas fees, or dispute procedures.
+          </p>
         </div>
 
         {/* Accordion List */}

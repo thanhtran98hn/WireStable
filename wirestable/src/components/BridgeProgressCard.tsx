@@ -2,6 +2,7 @@
 
 import React from "react";
 import { type BridgeStep } from "@/hooks/useCCTP";
+import { WarningIcon } from "@/components/icons/CustomIcons";
 
 interface BridgeProgressCardProps {
   step: BridgeStep;
@@ -100,7 +101,7 @@ export function BridgeProgressCard({
         )}
         {step === "failed" && (
           <span className="text-[var(--color-error)] text-xs font-semibold flex items-center gap-1">
-            ⚠️ Failed
+            <WarningIcon size={12} /> Failed
           </span>
         )}
         {!["success", "failed", "idle"].includes(step) && (

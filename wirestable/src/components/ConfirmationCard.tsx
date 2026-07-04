@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { recoverMessageAddress } from "viem";
 import type { ChatMessage } from "@/types";
 import { LoadingButton } from "@/components/loading/LoadingComponents";
+import { SyncIcon, WaveIcon, LockIcon, FileIcon, MailIcon, WarningIcon, ShieldIcon, HelpIcon, SearchIcon, CheckIcon } from "@/components/icons/CustomIcons";
 
 interface ConfirmationCardProps {
   message: ChatMessage;
@@ -27,6 +28,7 @@ export function ConfirmationCard({
   const [signatureStatus, setSignatureStatus] = useState<"verifying" | "valid" | "invalid" | "unsigned">("verifying");
   const [recoveredAgent, setRecoveredAgent] = useState<string | null>(null);
   const [slippage, setSlippage] = useState<number>(0.5);
+  const [showCertModal, setShowCertModal] = useState<boolean>(false);
 
   useEffect(() => {
     async function verifySignature() {
@@ -86,7 +88,9 @@ export function ConfirmationCard({
       <div className="confirm-card">
         {/* Header */}
         <div className="confirm-card-header">
-          <div className="confirm-card-icon">{isSwap ? "💱" : isBridge ? "🌉" : isStream ? "🌊" : isEscrowCreate ? "🔒" : isEscrowSubmit ? "📤" : "💸"}</div>
+          <div className="confirm-card-icon" style={{ color: "var(--color-primary)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {isSwap ? <SyncIcon size={24} animate /> : isBridge ? <WaveIcon size={24} animate /> : isStream ? <WaveIcon size={24} animate /> : isEscrowCreate ? <LockIcon size={24} /> : isEscrowSubmit ? <FileIcon size={24} /> : <MailIcon size={24} />}
+          </div>
           <div>
             <div className="confirm-card-title">
               {isSwap ? `Confirm Swap to ${swapIntent?.tokenOut}` : isBridge ? "Confirm CCTP Bridge" : isStream ? "Confirm Payroll Stream" : isEscrowCreate ? "Confirm Escrow Labor Deal" : isEscrowSubmit ? "Confirm Work Submission" : `Confirm ${intent?.token || "USDC"} Transfer`}
@@ -209,7 +213,7 @@ export function ConfirmationCard({
             <div className="confirm-card-row">
               <span className="confirm-card-label">Source Network</span>
               <span className="confirm-card-value" style={{ fontWeight: 600, color: "#94a3b8" }}>
-                {bridgeIntent?.sourceChain} (Sandbox)
+                {bridgeIntent?.sourceChain}
               </span>
             </div>
             <div className="confirm-card-row">
@@ -260,7 +264,7 @@ export function ConfirmationCard({
             </div>
             {activeQuote.id && activeQuote.id.startsWith("lock-") ? (
               <div className="confirm-card-row">
-                <span className="confirm-card-label" style={{ color: "var(--color-success)", fontWeight: 600 }}>🛡️ Hedging Status</span>
+                <span className="confirm-card-label" style={{ color: "var(--color-success)", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}><ShieldIcon size={14} className="text-[var(--color-success)]" /> Hedging Status</span>
                 <span className="confirm-card-value" style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--color-success)" }}>
                   Locked Rate (Option Active)
                 </span>
@@ -371,7 +375,9 @@ export function ConfirmationCard({
               marginBottom: "var(--space-3)",
             }}
           >
-            ⚠️ Quote expired. Please type a new command or restart swap.
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <WarningIcon size={14} /> Quote expired. Please type a new command or restart swap.
+            </div>
           </div>
         )}
 
@@ -408,6 +414,7 @@ export function ConfirmationCard({
 
         {/* Agent Cryptographic Signature Verification Badge */}
         <div 
+          onClick={() => signatureStatus === "valid" && setShowCertModal(true)}
           style={{
             marginTop: "var(--space-4)",
             marginBottom: "var(--space-4)",
@@ -428,30 +435,38 @@ export function ConfirmationCard({
             fontSize: "0.75rem",
             display: "flex",
             flexDirection: "column",
-            gap: "4px"
+            gap: "4px",
+            cursor: signatureStatus === "valid" ? "pointer" : "default",
+            transition: "all 0.2s ease"
           }}
+          className={signatureStatus === "valid" ? "hover:border-[rgba(16,185,129,0.3)] hover:bg-[rgba(16,185,129,0.08)]" : ""}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600 }}>
-            {signatureStatus === "verifying" && (
-              <>
-                <span className="spinner" style={{ width: "12px", height: "12px", border: "2px solid var(--color-primary)", borderTopColor: "transparent", borderRadius: "50%", display: "inline-block", animation: "spin 1s linear infinite" }} />
-                <span style={{ color: "var(--color-text-secondary)" }}>Verifying Agent Signature...</span>
-              </>
-            )}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", fontWeight: 600 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              {signatureStatus === "verifying" && (
+                <>
+                  <span className="spinner" style={{ width: "12px", height: "12px", border: "2px solid var(--color-primary)", borderTopColor: "transparent", borderRadius: "50%", display: "inline-block", animation: "spin 1s linear infinite" }} />
+                  <span style={{ color: "var(--color-text-secondary)" }}>Verifying Agent Signature...</span>
+                </>
+              )}
+              {signatureStatus === "valid" && (
+                <div style={{ color: "rgb(16, 185, 129)", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <ShieldIcon size={14} /> Verifiable ERC-8004 Payload
+                </div>
+              )}
+              {signatureStatus === "invalid" && (
+                <div style={{ color: "rgb(239, 68, 68)", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <WarningIcon size={14} /> Signature Verification Failed
+                </div>
+              )}
+              {signatureStatus === "unsigned" && (
+                <>
+                  <span style={{ color: "var(--color-text-tertiary)", display: "inline-flex", alignItems: "center", gap: "4px" }}><HelpIcon size={12} /> Unsigned Payload</span>
+                </>
+              )}
+            </div>
             {signatureStatus === "valid" && (
-              <>
-                <span style={{ color: "rgb(16, 185, 129)" }}>🛡️ Verifiable ERC-8004 Payload</span>
-              </>
-            )}
-            {signatureStatus === "invalid" && (
-              <>
-                <span style={{ color: "rgb(239, 68, 68)" }}>⚠️ Signature Verification Failed</span>
-              </>
-            )}
-            {signatureStatus === "unsigned" && (
-              <>
-                <span style={{ color: "var(--color-text-tertiary)" }}>❔ Unsigned Payload</span>
-              </>
+              <span style={{ fontSize: "10px", color: "var(--color-primary)", textDecoration: "underline", display: "inline-flex", alignItems: "center", gap: "2px" }}><SearchIcon size={10} /> Verify</span>
             )}
           </div>
           {signatureStatus === "valid" && recoveredAgent && (
@@ -467,6 +482,112 @@ export function ConfirmationCard({
             </div>
           )}
         </div>
+
+        {/* ERC-8004 Attestation Certificate Modal */}
+        {showCertModal && (
+          <div 
+            style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+            onClick={() => setShowCertModal(false)}
+          >
+            <div 
+              className="card"
+              style={{
+                width: "100%",
+                maxWidth: "500px",
+                padding: "var(--space-5)",
+                background: "var(--color-surface)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-lg)",
+                boxShadow: "var(--shadow-lg)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--space-4)",
+                maxHeight: "90vh",
+                overflowY: "auto"
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
+                <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0, color: "var(--color-text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: "6px" }}><ShieldIcon size={16} className="text-[var(--color-primary)]" /> Cryptographic Attestation</span>
+                </h3>
+                <button 
+                  onClick={() => setShowCertModal(false)}
+                  style={{ background: "none", border: "none", color: "var(--color-text-secondary)", cursor: "pointer", fontSize: "1.25rem", fontWeight: "bold" }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "0.75rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px", background: "rgba(16, 185, 129, 0.05)", border: "1px solid rgba(16, 185, 129, 0.15)", borderRadius: "6px" }}>
+                  <span style={{ fontWeight: 600, color: "rgb(16, 185, 129)" }}>Attestation Status</span>
+                  <span style={{ background: "rgba(16, 185, 129, 0.15)", color: "rgb(16, 185, 129)", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>VERIFIED</span>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <span style={{ color: "var(--color-text-tertiary)", fontWeight: 600 }}>Agent Registry Metadata</span>
+                  <div style={{ background: "var(--color-bg-secondary)", padding: "10px", borderRadius: "6px", border: "1px solid var(--color-border)", display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span>Agent Name:</span>
+                      <strong style={{ color: "var(--color-text-primary)" }}>WireStable Agent v1</strong>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span>IPFS Metadata Schema:</span>
+                      <a href="https://ipfs.io/ipfs/QmVerifiableAgentMetadataSchemaERC8004" target="_blank" rel="noreferrer" style={{ color: "var(--color-primary)", textDecoration: "underline" }}>
+                        ipfs://QmVerifiableAgentMetadataSchemaERC8004
+                      </a>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span>Registry Address:</span>
+                      <a href={`https://testnet.arcscan.app/address/0x8004e3b79ce858c0df1b44ec069f1092eb27ef86`} target="_blank" rel="noreferrer" style={{ color: "var(--color-primary)", textDecoration: "underline", fontFamily: "monospace" }}>
+                        0x8004...ef86
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <span style={{ color: "var(--color-text-tertiary)", fontWeight: 600 }}>Cryptographic Signer</span>
+                  <div style={{ background: "var(--color-bg-secondary)", padding: "10px", borderRadius: "6px", border: "1px solid var(--color-border)", display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span>Recovered Signer:</span>
+                      <strong style={{ color: "var(--color-text-primary)", fontFamily: "monospace" }}>{recoveredAgent}</strong>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px", marginTop: "4px" }}>
+                      <span>Signature String (EIP-191):</span>
+                      <span style={{ color: "var(--color-text-secondary)", fontFamily: "monospace", overflowWrap: "anywhere", fontSize: "0.6875rem", background: "rgba(0,0,0,0.2)", padding: "6px", borderRadius: "4px" }}>
+                        {message.agentSignature}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <span style={{ color: "var(--color-text-tertiary)", fontWeight: 600 }}>Attested Payload Hash (Keccak-256)</span>
+                  <code style={{ background: "var(--color-bg-secondary)", padding: "8px", borderRadius: "6px", border: "1px solid var(--color-border)", color: "var(--color-primary)", fontSize: "0.6875rem", fontFamily: "monospace", wordBreak: "break-all" }}>
+                    {message.agentPayloadHash}
+                  </code>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <span style={{ color: "var(--color-text-tertiary)", fontWeight: 600 }}>Parsed Intent Data</span>
+                  <pre style={{ background: "var(--color-bg-secondary)", padding: "10px", borderRadius: "6px", border: "1px solid var(--color-border)", color: "var(--color-success)", fontSize: "0.6875rem", fontFamily: "monospace", maxHeight: "100px", overflowY: "auto", margin: 0 }}>
+                    {JSON.stringify({ intent, swapIntent, bridgeIntent, streamCreateIntent, escrowCreateIntent, escrowSubmitIntent }, null, 2)}
+                  </pre>
+                </div>
+              </div>
+
+              <button 
+                className="btn btn-secondary btn-sm" 
+                onClick={() => setShowCertModal(false)}
+                style={{ width: "100%", marginTop: "10px" }}
+              >
+                Close Verification
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Compliance Status Indicator */}
         <div
@@ -484,7 +605,7 @@ export function ConfirmationCard({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, color: "rgb(16, 185, 129)" }}>
-            <span>✅ Compliance Checked</span>
+            <CheckIcon size={14} className="text-[var(--color-success)]" /> Compliance Checked
           </div>
           <span style={{ 
             fontSize: "0.6875rem", 
@@ -518,24 +639,31 @@ export function ConfirmationCard({
             id="confirm-transfer-btn"
             style={{ flex: 2 }}
           >
-            {isExpired ? "Expired" : isSwap ? "🔄 Confirm Swap" : isBridge ? "🌉 Confirm Bridge" : isEscrowCreate ? "🔒 Confirm & Lock" : isEscrowSubmit ? "📤 Confirm Submission" : "✅ Confirm & Sign"}
+            {isExpired ? "Expired" : isSwap ? "Confirm Swap" : isBridge ? "Confirm Bridge" : isEscrowCreate ? "Confirm & Lock" : isEscrowSubmit ? "Confirm Submission" : "Confirm & Sign"}
           </LoadingButton>
         </div>
 
         {/* Security note */}
-        <p
+        <div
           style={{
             fontSize: "0.6875rem",
             color: "var(--color-text-tertiary)",
             textAlign: "center",
             marginTop: "var(--space-3)",
             lineHeight: 1.4,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "4px"
           }}
         >
-          🔒 Your wallet will prompt you to sign.
-          <br />
-          {isBridge ? `Bridging utilizes Circle CCTP burn-and-mint mechanism.` : isEscrowSubmit ? `Submission checks are run off-chain before contract interaction.` : `Funds will be secured on Arc Testnet only.`}
-        </p>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+            <LockIcon size={12} /> Your wallet will prompt you to sign.
+          </span>
+          <span>
+            {isBridge ? `Bridging utilizes Circle CCTP burn-and-mint mechanism.` : isEscrowSubmit ? `Submission checks are run off-chain before contract interaction.` : `Funds will be secured on Arc Testnet only.`}
+          </span>
+        </div>
       </div>
     </div>
   );

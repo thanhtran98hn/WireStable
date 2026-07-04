@@ -155,7 +155,7 @@ export function ModalHeader({ title, onClose, icon, showCloseButton = true }: Mo
           </div>
         )}
         {title && (
-          <h3 className="text-xl font-bold font-serif text-[var(--color-text-primary)] leading-tight tracking-tight">
+          <h3 className="text-xl font-bold font-sans text-[var(--color-text-primary)] leading-tight tracking-tight">
             {title}
           </h3>
         )}
@@ -308,7 +308,7 @@ export class ModalErrorBoundary extends React.Component<
               />
             </svg>
           </div>
-          <h3 className="text-lg font-bold font-serif text-[var(--color-text-primary)] mb-2">
+          <h3 className="text-lg font-bold font-sans text-[var(--color-text-primary)] mb-2">
             Modal Crashed
           </h3>
           <p className="text-xs text-[var(--color-text-secondary)] mb-6">

@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { BuildingIcon, BoltIcon, HelpIcon, DocsIcon, MailIcon, LockIcon, FileIcon, WireStableLogo } from "@/components/icons/CustomIcons";
 
 interface NavbarProps {
   children?: React.ReactNode;
   logoText?: string;
-  logoIcon?: string;
+  logoIcon?: React.ReactNode;
 }
 
 export function Navbar({ children, logoText, logoIcon }: NavbarProps) {
@@ -48,35 +49,35 @@ export function Navbar({ children, logoText, logoIcon }: NavbarProps) {
 
 
   // Determine site branding based on route
-  const getBranding = () => {
+  const getBranding = (): { text: string; icon: React.ReactNode } => {
     if (logoText && logoIcon) {
       return { text: logoText, icon: logoIcon };
     }
     if (pathname.startsWith("/admin")) {
-      return { text: "Enterprise Treasury", icon: "🏢" };
+      return { text: "Enterprise Treasury", icon: <BuildingIcon size={16} /> };
     }
     if (pathname.startsWith("/agent-studio")) {
-      return { text: "AgentOS Studio", icon: "⚡" };
+      return { text: "AgentOS Studio", icon: <BoltIcon size={16} /> };
     }
     if (pathname.startsWith("/faq")) {
-      return { text: "WireFAQ", icon: "❓" };
+      return { text: "WireFAQ", icon: <HelpIcon size={16} /> };
     }
     if (pathname.startsWith("/docs")) {
-      return { text: "WireDocs", icon: "📖" };
+      return { text: "WireDocs", icon: <DocsIcon size={16} /> };
     }
     if (pathname.startsWith("/contact")) {
-      return { text: "WireContact", icon: "✉️" };
+      return { text: "WireContact", icon: <MailIcon size={16} /> };
     }
     if (pathname.startsWith("/about")) {
-      return { text: "WireAbout", icon: "🏢" };
+      return { text: "WireAbout", icon: <BuildingIcon size={16} /> };
     }
     if (pathname.startsWith("/privacy")) {
-      return { text: "WirePrivacy", icon: "🔒" };
+      return { text: "WirePrivacy", icon: <LockIcon size={16} /> };
     }
     if (pathname.startsWith("/terms")) {
-      return { text: "WireTerms", icon: "📄" };
+      return { text: "WireTerms", icon: <FileIcon size={16} /> };
     }
-    return { text: "WireStable", icon: "W$" };
+    return { text: "WireStable", icon: <WireStableLogo size={20} className="text-white" /> };
   };
 
   const branding = getBranding();
@@ -108,7 +109,7 @@ export function Navbar({ children, logoText, logoIcon }: NavbarProps) {
         {/* Logo and Branding */}
         <Link href="/" style={{ textDecoration: "none", zIndex: 110 }}>
           <div className="app-logo">
-            <div className="app-logo-icon" style={{ background: "linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-light) 100%)", color: "var(--color-text-inverse)", width: "36px", height: "36px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "1.1rem" }}>
+            <div className="app-logo-icon" style={{ background: "var(--color-primary)", color: "var(--color-text-inverse)", width: "36px", height: "36px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold" }}>
               {branding.icon}
             </div>
             <div className="app-logo-text" style={{ fontSize: "1.125rem", fontWeight: "bold", color: "var(--color-text-primary)" }}>

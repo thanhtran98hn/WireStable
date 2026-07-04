@@ -9,13 +9,13 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Terms of Service | WireStable",
-    description: "Read the terms of service governing usage of the WireStable platform and sandboxed remittance systems.",
+    description: "Read the terms of service governing usage of the WireStable platform and remittance systems.",
     url: "https://wirestable.xyz/terms",
     type: "website"
   },
   twitter: {
     title: "Terms of Service | WireStable",
-    description: "Read the terms of service governing usage of the WireStable platform and sandboxed remittance systems."
+    description: "Read the terms of service governing usage of the WireStable platform and remittance systems."
   }
 };
 

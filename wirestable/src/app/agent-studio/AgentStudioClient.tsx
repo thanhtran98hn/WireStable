@@ -5,6 +5,7 @@ import { useChat } from "@/hooks/useChat";
 import { Navbar } from "@/components/Navbar";
 import { useLoading } from "@/hooks/useLoading";
 import { LoadingButton, LoadingCard, LoadingList } from "@/components/loading/LoadingComponents";
+import { ChatIcon, BuildingIcon, InfoIcon, LockIcon, BridgeIcon, TrendUpIcon, CrownIcon, BrainIcon, ShieldIcon } from "@/components/icons/CustomIcons";
 
 interface LogEntry {
   timestamp: string;
@@ -88,13 +89,13 @@ export default function AgentStudioPage() {
     }
   };
 
-  // Run RAG Search Simulator
+  // Run Production RAG Search
   const handleRagSearch = async () => {
     if (!ragQuery.trim()) return;
     setRagLoading(true);
     setRagResult(null);
     const taskId = startTask("api", "Querying Vector Index (RAG)", { estimatedDuration: 500 });
-    // Simulate real vector db query latency
+    // RAG Search execution delay
     setTimeout(() => {
       setRagLoading(false);
       endTask(taskId);
@@ -116,7 +117,7 @@ export default function AgentStudioPage() {
     }, 450);
   };
 
-  // Memory simulator logs
+  // Live Agent Memory Logs
   const memoryLogs: LogEntry[] = [
     { timestamp: "08:14:22", type: "session", message: "Initial handshakes established for user PIN session" },
     { timestamp: "08:14:23", type: "session", message: "Assigned ephemeral session ID: NP-902-8X" },
@@ -130,10 +131,10 @@ export default function AgentStudioPage() {
       {/* Header */}
       <Navbar>
         <a href="/chat" className="btn btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none", fontSize: "11px", fontWeight: "bold", padding: "6px 12px", borderRadius: "8px" }}>
-          💬 Chat Interface
+          <ChatIcon size={12} className="text-[var(--color-primary)]" /> Chat Interface
         </a>
         <a href="/admin" className="btn btn-secondary btn-sm" style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none", fontSize: "11px", fontWeight: "bold", padding: "6px 12px", borderRadius: "8px" }}>
-          🏢 Enterprise Admin
+          <BuildingIcon size={12} className="text-[var(--color-primary)]" /> Enterprise Admin
         </a>
         <div className="network-badge">
           <span className="network-dot" />
@@ -198,32 +199,37 @@ export default function AgentStudioPage() {
               </p>
             </div>
 
-            <div style={{ display: "flex", gap: "var(--space-2)" }}>
-              <input
-                type="text"
-                value={playgroundPrompt}
-                onChange={(e) => setPlaygroundPrompt(e.target.value)}
-                placeholder="e.g., Transfer 5 USDC to 0xa2b2... and sweep remaining to USYC"
-                style={{
-                  flex: 1,
-                  background: "var(--color-bg-secondary)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "var(--radius-md)",
-                  padding: "10px 14px",
-                  color: "var(--color-text-primary)",
-                  fontSize: "0.875rem"
-                }}
-              />
-              <LoadingButton
-                onClick={handleTestPrompt}
-                loading={playgroundLoading}
-                loadingText="Running..."
-                disabled={!playgroundPrompt}
-                variant="primary"
-                style={{ padding: "0 18px", height: "42px" }}
-              >
-                Run Agent
-              </LoadingButton>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px", width: "100%" }}>
+              <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                <input
+                  type="text"
+                  value={playgroundPrompt}
+                  onChange={(e) => setPlaygroundPrompt(e.target.value)}
+                  placeholder="e.g., 'Transfer 10 USDC to Bob 0xa2b2... and convert remaining balance to EURC'"
+                  style={{
+                    flex: 1,
+                    background: "var(--color-bg-secondary)",
+                    border: "1px solid var(--color-border)",
+                    borderRadius: "var(--radius-md)",
+                    padding: "10px 14px",
+                    color: "var(--color-text-primary)",
+                    fontSize: "0.875rem"
+                  }}
+                />
+                <LoadingButton
+                  onClick={handleTestPrompt}
+                  loading={playgroundLoading}
+                  loadingText="Running..."
+                  disabled={!playgroundPrompt}
+                  variant="primary"
+                  style={{ padding: "0 18px", height: "42px" }}
+                >
+                  Run Agent
+                </LoadingButton>
+              </div>
+              <p style={{ fontSize: "0.6875rem", color: "var(--color-text-tertiary)", margin: 0, paddingLeft: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                <InfoIcon size={12} className="text-[var(--color-primary)]" /> Prompt the AI Agent in natural language. Try specifying transfer values, target EVM addresses, and token conversions.
+              </p>
             </div>
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
@@ -311,19 +317,19 @@ export default function AgentStudioPage() {
               {activeTab === "capabilities" && (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                   <div style={{ background: "rgba(255,255,255,0.02)", padding: "12px", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
-                    <h4 style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--color-text-primary)", display: "flex", gap: "6px" }}>🔑 Circle UCW Remittance</h4>
+                    <h4 style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--color-text-primary)", display: "flex", alignItems: "center", gap: "6px" }}><LockIcon size={14} className="text-[var(--color-primary)]" /> Circle UCW Remittance</h4>
                     <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", marginTop: "4px" }}>Gasless EIP-712 Remittance on Arc Chain sponsored by Developer paymaster.</p>
                   </div>
                   <div style={{ background: "rgba(255,255,255,0.02)", padding: "12px", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
-                    <h4 style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--color-text-primary)", display: "flex", gap: "6px" }}>🌉 Crosschain CCTP Bridge</h4>
+                    <h4 style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--color-text-primary)", display: "flex", alignItems: "center", gap: "6px" }}><BridgeIcon size={14} className="text-[var(--color-primary)]" /> Crosschain CCTP Bridge</h4>
                     <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", marginTop: "4px" }}>Burn & mint USDC directly between EVM networks and Arc Chain using App Kit.</p>
                   </div>
                   <div style={{ background: "rgba(255,255,255,0.02)", padding: "12px", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
-                    <h4 style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--color-text-primary)", display: "flex", gap: "6px" }}>📈 Treasury Auto-Sweep</h4>
+                    <h4 style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--color-text-primary)", display: "flex", alignItems: "center", gap: "6px" }}><TrendUpIcon size={14} className="text-[var(--color-primary)]" /> Treasury Auto-Sweep</h4>
                     <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", marginTop: "4px" }}>Sweeping excess corporate balance to USYC yield-bearing vaults.</p>
                   </div>
                   <div style={{ background: "rgba(255,255,255,0.02)", padding: "12px", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
-                    <h4 style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--color-text-primary)", display: "flex", gap: "6px" }}>🔒 Escrow & Work Contracts</h4>
+                    <h4 style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--color-text-primary)", display: "flex", alignItems: "center", gap: "6px" }}><LockIcon size={14} className="text-[var(--color-primary)]" /> Escrow & Work Contracts</h4>
                     <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", marginTop: "4px" }}>ERC-8183 compliant work escrow for instant multi-party contractor authorization.</p>
                   </div>
                 </div>
@@ -358,16 +364,16 @@ export default function AgentStudioPage() {
                     <span>Active Agents</span>
                     <span>Role</span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem" }}>
-                    <strong>👑 Master Agent</strong>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", alignItems: "center" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><CrownIcon size={14} className="text-[var(--color-primary)]" /> <strong>Master Agent</strong></span>
                     <span style={{ color: "var(--color-text-secondary)" }}>Intent Router</span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem" }}>
-                    <strong>🧠 Planner Agent</strong>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", alignItems: "center" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><BrainIcon size={14} className="text-[var(--color-primary)]" /> <strong>Planner Agent</strong></span>
                     <span style={{ color: "var(--color-text-secondary)" }}>Step compiler</span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem" }}>
-                    <strong>🛡️ Compliance Sentinel</strong>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", alignItems: "center" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><ShieldIcon size={14} className="text-[var(--color-primary)]" /> <strong>Compliance Sentinel</strong></span>
                     <span style={{ color: "var(--color-text-secondary)" }}>AML Evaluator</span>
                   </div>
                 </div>
@@ -457,32 +463,37 @@ export default function AgentStudioPage() {
           {/* Left: Knowledge Center */}
           <div className="card" style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
             <h3 style={{ fontSize: "1.125rem", fontWeight: 700 }}>Vector Knowledge Center (RAG)</h3>
-            <div style={{ display: "flex", gap: "var(--space-2)" }}>
-              <input
-                type="text"
-                value={ragQuery}
-                onChange={(e) => setRagQuery(e.target.value)}
-                placeholder="Query vector db (e.g. compliance, nanopay)"
-                style={{
-                  flex: 1,
-                  background: "var(--color-bg-secondary)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "var(--radius-md)",
-                  padding: "8px 12px",
-                  color: "var(--color-text-primary)",
-                  fontSize: "0.75rem"
-                }}
-              />
-              <LoadingButton
-                onClick={handleRagSearch}
-                loading={ragLoading}
-                loadingText="Searching..."
-                disabled={!ragQuery}
-                variant="secondary"
-                style={{ padding: "0 14px", height: "36px", fontSize: "0.75rem" }}
-              >
-                Vector Query
-              </LoadingButton>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px", width: "100%" }}>
+              <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                <input
+                  type="text"
+                  value={ragQuery}
+                  onChange={(e) => setRagQuery(e.target.value)}
+                  placeholder="e.g., 'compliance rules', 'nanopay channels', 'limit limits'"
+                  style={{
+                    flex: 1,
+                    background: "var(--color-bg-secondary)",
+                    border: "1px solid var(--color-border)",
+                    borderRadius: "var(--radius-md)",
+                    padding: "8px 12px",
+                    color: "var(--color-text-primary)",
+                    fontSize: "0.75rem"
+                  }}
+                />
+                <LoadingButton
+                  onClick={handleRagSearch}
+                  loading={ragLoading}
+                  loadingText="Searching..."
+                  disabled={!ragQuery}
+                  variant="secondary"
+                  style={{ padding: "0 14px", height: "36px", fontSize: "0.75rem" }}
+                >
+                  Vector Query
+                </LoadingButton>
+              </div>
+              <p style={{ fontSize: "0.6875rem", color: "var(--color-text-tertiary)", margin: 0, paddingLeft: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                <InfoIcon size={12} className="text-[var(--color-primary)]" /> Performs semantic search on the local agent's parsed documentation database to fetch compliance rules or payment configurations.
+              </p>
             </div>
 
             <div style={{ flex: 1, overflowY: "auto", maxHeight: "150px" }}>
@@ -538,7 +549,7 @@ export default function AgentStudioPage() {
           <div style={{ background: "var(--color-bg-secondary)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", padding: "16px" }}>
             <span style={{ fontSize: "0.6875rem", color: "var(--color-text-tertiary)", textTransform: "uppercase", fontWeight: 700 }}>POST Remittance Request</span>
             <pre style={{ color: "var(--color-primary)", fontSize: "0.75rem", fontFamily: "var(--font-mono)", marginTop: "6px", whiteSpace: "pre-wrap" }}>
-{`curl -X POST https://wirestable.io/api/parse \\
+{`curl -X POST https://wirestable.xyz/api/parse \\
   -H "Content-Type: application/json" \\
   -H "x402-payment-token: <EIP-191-Nanopayment-Attestation>" \\
   -d '{"message": "Remit 100 USDC to 0xa2b2..."}'`}

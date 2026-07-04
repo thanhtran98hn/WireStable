@@ -2,23 +2,15 @@ import { Navbar } from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { DiscoveryEngine } from "@/components/DiscoveryEngine";
 import { Footer } from "@/components/Footer";
+import { HomeIcon, BoltIcon } from "@/components/icons/CustomIcons";
 
 export default function AboutPage() {
   const team = [
-
     {
       name: "Thanh Tran",
       role: "Lead Protocol Architect & Founder",
       bio: "Blockchain engineer focused on payment infrastructure. Previously built gasless dApps and smart wallet aggregators on EVM environments.",
-      avatar: "⚡",
-      github: "https://github.com",
-      twitter: "https://twitter.com"
-    },
-    {
-      name: "Eric",
-      role: "AI Agent & UI Architect",
-      bio: "Specialist in large language model function-calling orchestration. Designed the AgentOS natural language parser engine.",
-      avatar: "🧠",
+      avatar: "/thanhtran_avatar.png",
       github: "https://github.com",
       twitter: "https://twitter.com"
     }
@@ -28,11 +20,11 @@ export default function AboutPage() {
     <div className="app-container" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       {/* Header */}
       <Navbar>
-        <a href="/" className="btn btn-secondary btn-sm" style={{ textDecoration: "none", fontSize: "11px", fontWeight: "bold" }}>
-          🏠 Landing Page
+        <a href="/" className="btn btn-secondary btn-sm" style={{ textDecoration: "none", fontSize: "11px", fontWeight: "bold", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+          <HomeIcon size={11} /> Landing Page
         </a>
-        <a href="/chat" className="btn btn-primary btn-sm" style={{ textDecoration: "none", fontSize: "11px", fontWeight: "bold" }}>
-          Launch App ⚡
+        <a href="/chat" className="btn btn-primary btn-sm" style={{ textDecoration: "none", fontSize: "11px", fontWeight: "bold", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+          Launch App <BoltIcon size={11} />
         </a>
       </Navbar>
 
@@ -57,13 +49,13 @@ export default function AboutPage() {
         {/* Vision Rows */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="card" style={{ padding: "var(--space-4)" }}>
-            <h3 style={{ fontSize: "1.125rem", color: "var(--color-text-primary)" }}>Our Vision 🚀</h3>
+            <h3 style={{ fontSize: "1.125rem", color: "var(--color-text-primary)", display: "flex", alignItems: "center", gap: "6px" }}><BoltIcon size={16} className="text-[var(--color-primary)]" /> Our Vision</h3>
             <p style={{ fontSize: "0.875rem", color: "var(--color-text-secondary)", marginTop: "8px", lineHeight: 1.5 }}>
               A world where capital flow is completely automated. AI agents autonomously manage treasury balances, settle contract milestones in real-time, and purchase resources on-chain without any user friction.
             </p>
           </div>
           <div className="card" style={{ padding: "var(--space-4)" }}>
-            <h3 style={{ fontSize: "1.125rem", color: "var(--color-text-primary)" }}>Our Values 🛡️</h3>
+            <h3 style={{ fontSize: "1.125rem", color: "var(--color-text-primary)", display: "flex", alignItems: "center", gap: "6px" }}><BoltIcon size={16} className="text-[var(--color-primary)]" /> Our Values</h3>
             <p style={{ fontSize: "0.875rem", color: "var(--color-text-secondary)", marginTop: "8px", lineHeight: 1.5 }}>
               Security, auditability, and speed. We believe that non-custodial custody must be paired with automated Maker-Checker workflows, allowing businesses to stay compliant without losing velocity.
             </p>
@@ -73,11 +65,15 @@ export default function AboutPage() {
         {/* Team Grid */}
         <div>
           <h3 style={{ fontSize: "1.25rem", fontWeight: 800, marginBottom: "16px" }}>Meet the Founding Team</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div style={{ display: "flex", justifyContent: "center" }}>
             {team.map((member, idx) => (
-              <div key={idx} className="card flex flex-col sm:flex-row gap-4 p-4" style={{ alignItems: "center" }}>
-                <div style={{ fontSize: "2.5rem", background: "var(--color-bg-secondary)", width: "64px", height: "64px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", border: "1px solid var(--color-border)", flexShrink: 0 }}>
-                  {member.avatar}
+              <div key={idx} className="card flex flex-col sm:flex-row gap-4 p-4" style={{ alignItems: "center", maxWidth: "480px", width: "100%" }}>
+                <div style={{ background: "var(--color-bg-secondary)", width: "64px", height: "64px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", border: "1px solid var(--color-border)", flexShrink: 0, overflow: "hidden" }}>
+                  {member.avatar.includes("/") || member.avatar.includes(".") ? (
+                    <img src={member.avatar} alt={member.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <span style={{ fontSize: "2.5rem" }}>{member.avatar}</span>
+                  )}
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
                   <strong style={{ fontSize: "1rem", color: "var(--color-text-primary)" }}>{member.name}</strong>
